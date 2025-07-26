@@ -14,6 +14,7 @@ CONFIGS_alpine="Alpine Linux (Lightweight)"
 CONFIGS_debian="Debian (Stable)"
 CONFIGS_centos="CentOS/RHEL (Enterprise)"
 CONFIGS_windows="Windows WSL2"
+CONFIGS_gpu="GPU-Enabled with CUDA Support"
 
 # Colors for output
 RED='\033[0;31m'
@@ -49,6 +50,7 @@ show_configs() {
     echo "  debian - $CONFIGS_debian"
     echo "  centos - $CONFIGS_centos"
     echo "  windows - $CONFIGS_windows"
+    echo "  gpu - $CONFIGS_gpu"
     echo
 }
 
@@ -63,6 +65,7 @@ switch_config() {
         "debian") config_desc="$CONFIGS_debian" ;;
         "centos") config_desc="$CONFIGS_centos" ;;
         "windows") config_desc="$CONFIGS_windows" ;;
+        "gpu") config_desc="$CONFIGS_gpu" ;;
         *)
             print_error "Unknown configuration: $config_name"
             echo "Use '$0 list' to see available configurations"
@@ -119,6 +122,18 @@ switch_config() {
             print_status "Copied and made setup-windows.sh executable"
         else
             print_warning "setup-windows.sh not found for Windows configuration"
+        fi
+    fi
+    
+    # Special handling for GPU configuration
+    if [[ "$config_name" == "gpu" ]]; then
+        local setup_script="$variant_dir/setup-gpu.sh"
+        if [[ -f "$setup_script" ]]; then
+            cp "$setup_script" "$SCRIPT_DIR/setup-gpu.sh"
+            chmod +x "$SCRIPT_DIR/setup-gpu.sh"
+            print_status "Copied and made setup-gpu.sh executable"
+        else
+            print_warning "setup-gpu.sh not found for GPU configuration"
         fi
     fi
     
@@ -181,6 +196,7 @@ show_variant_info() {
         "debian") config_desc="$CONFIGS_debian" ;;
         "centos") config_desc="$CONFIGS_centos" ;;
         "windows") config_desc="$CONFIGS_windows" ;;
+        "gpu") config_desc="$CONFIGS_gpu" ;;
         *)
             print_error "Unknown configuration: $config_name"
             exit 1

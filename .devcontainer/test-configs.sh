@@ -23,6 +23,7 @@ CONFIGS_alpine="Alpine Linux (Lightweight)"
 CONFIGS_debian="Debian (Stable)"
 CONFIGS_centos="CentOS/RHEL (Enterprise)"
 CONFIGS_windows="Windows WSL2"
+CONFIGS_gpu="GPU-Enabled with CUDA Support"
 
 # Colors for output
 RED='\033[0;31m'
@@ -59,6 +60,7 @@ test_config() {
         "debian") config_desc="$CONFIGS_debian" ;;
         "centos") config_desc="$CONFIGS_centos" ;;
         "windows") config_desc="$CONFIGS_windows" ;;
+        "gpu") config_desc="$CONFIGS_gpu" ;;
         *)
             print_error "Unknown configuration: $config_name"
             return 1
@@ -247,7 +249,7 @@ run_all_tests() {
     fi
     
     # Test each configuration
-    for config in ubuntu alpine debian centos windows; do
+    for config in ubuntu alpine debian centos windows gpu; do
         total_tests=$((total_tests + 1))
         if test_config "$config"; then
             print_status "Configuration $config test: PASSED"

@@ -24,9 +24,13 @@ This directory contains multiple devcontainer configurations for the Claude Code
     ├── centos/                # CentOS/RHEL (Enterprise)
     │   ├── devcontainer.json
     │   └── Dockerfile
-    └── windows/               # Windows WSL2
+    ├── windows/               # Windows WSL2
+    │   ├── devcontainer.json
+    │   └── setup-windows.sh
+    └── gpu/                   # GPU-Enabled with CUDA
         ├── devcontainer.json
-        └── setup-windows.sh
+        ├── Dockerfile
+        └── setup-gpu.sh
 ```
 
 ## Available Configurations
@@ -61,6 +65,13 @@ This directory contains multiple devcontainer configurations for the Claude Code
 - **Size**: ~1.0GB
 - **Features**: Windows integration, WSL2 optimization
 
+### 6. **GPU-Enabled** (CUDA Support - Build Block)
+- **Base**: `ubuntu:20.04` (built from scratch)
+- **Best for**: GPU-accelerated development, ML/AI workloads
+- **Size**: ~6.0GB
+- **Features**: CUDA 11.8, PyTorch, TensorFlow, Jupyter, GPU monitoring
+- **Approach**: Build block method for maximum customization and control
+
 ## How to Use
 
 ### Option 1: Use the Switch Script (Recommended)
@@ -80,6 +91,7 @@ chmod +x .devcontainer/switch-config.sh
 .devcontainer/switch-config.sh debian    # Debian
 .devcontainer/switch-config.sh centos    # CentOS/RHEL
 .devcontainer/switch-config.sh windows   # Windows WSL2
+.devcontainer/switch-config.sh gpu       # GPU-Enabled with CUDA
 
 # Show current configuration
 .devcontainer/switch-config.sh current
@@ -108,9 +120,15 @@ chmod +x .devcontainer/switch-config.sh
    cp .devcontainer/variants/centos/Dockerfile .devcontainer/Dockerfile
    
    # For Windows WSL2
-   cp .devcontainer/variants/windows/devcontainer.json .devcontainer/devcontainer.json
-   cp .devcontainer/variants/windows/setup-windows.sh .devcontainer/setup-windows.sh
-   chmod +x .devcontainer/setup-windows.sh
+cp .devcontainer/variants/windows/devcontainer.json .devcontainer/devcontainer.json
+cp .devcontainer/variants/windows/setup-windows.sh .devcontainer/setup-windows.sh
+chmod +x .devcontainer/setup-windows.sh
+
+# For GPU-Enabled
+cp .devcontainer/variants/gpu/devcontainer.json .devcontainer/devcontainer.json
+cp .devcontainer/variants/gpu/Dockerfile .devcontainer/Dockerfile
+cp .devcontainer/variants/gpu/setup-gpu.sh .devcontainer/setup-gpu.sh
+chmod +x .devcontainer/setup-gpu.sh
    ```
 
 2. Rebuild the container in VS Code (Command Palette → "Dev Containers: Rebuild Container")
@@ -149,21 +167,29 @@ Each variant includes detailed comments explaining:
 - **Package manager differences** (apt, apk, yum)
 - **git-delta installation methods** (.deb, .apk, tar.gz)
 - **User and path differences** (node vs vscode user)
+- **GPU-specific features** (CUDA, PyTorch, TensorFlow, monitoring tools, build blocks)
 
 ## Environment Variables
 
 All configurations set these environment variables:
 
-- `NODE_OPTIONS=--max-old-space-size=4096` - Increased Node.js memory limit
+- `NODE_OPTIONS=--max-old-space-size=4096` - Increased Node.js memory limit (GPU: 8192)
 - `CLAUDE_CONFIG_DIR=/home/node/.claude` - Claude configuration directory (Windows: `/home/vscode/.claude`)
 - `POWERLEVEL9K_DISABLE_GITSTATUS=true` - Disable git status in prompt for performance
 - `DEVCONTAINER=true` - Indicates running in devcontainer
 - `TZ=America/New_York` - Timezone set to Eastern Time (New York)
 
+**GPU-Specific Environment Variables:**
+- `CUDA_HOME=/usr/local/cuda` - CUDA installation path
+- `LD_LIBRARY_PATH` - CUDA library path
+- `NVIDIA_VISIBLE_DEVICES=all` - GPU device visibility
+- `NVIDIA_DRIVER_CAPABILITIES=compute,utility` - GPU driver capabilities
+
 ## Volume Mounts
 
 - `claude-code-bashhistory-${devcontainerId}` - Persistent command history
 - `claude-code-config-${devcontainerId}` - Claude configuration persistence
+- `claude-code-gpu-cache-${devcontainerId}` - GPU cache persistence (GPU variant only)
 
 ## Performance Considerations
 
@@ -171,6 +197,7 @@ All configurations set these environment variables:
 - **Ubuntu/Debian**: Balanced performance and package availability
 - **CentOS**: Slightly slower startup due to enterprise packages
 - **Windows WSL2**: Good performance with Windows integration
+- **GPU-Enabled**: Large size (~6GB) but full GPU acceleration with build block approach
 
 ## Troubleshooting
 

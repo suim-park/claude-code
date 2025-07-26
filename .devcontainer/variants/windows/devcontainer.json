@@ -1,15 +1,13 @@
 {
-  "name": "Claude Code Sandbox",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "args": {
-      "TZ": "${localEnv:TZ:America/New_York}"
-    }
+  "name": "Claude Code Windows",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "runArgs": [
-    "--cap-add=NET_ADMIN",
-    "--cap-add=NET_RAW"
-  ],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -36,17 +34,17 @@
       }
     }
   },
-  "remoteUser": "node",
+  "remoteUser": "vscode",
   "mounts": [
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    "source=claude-code-config-${devcontainerId},target=/home/node/.claude,type=volume"
+    "source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume"
   ],
   "remoteEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
-    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh"
+  "postCreateCommand": "bash .devcontainer/setup-windows.sh"
 } 

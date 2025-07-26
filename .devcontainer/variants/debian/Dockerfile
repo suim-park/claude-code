@@ -1,29 +1,30 @@
 # =============================================================================
-# CLAUDE CODE DEVCONTAINER - UBUNTU VARIANT (BASE CONFIGURATION)
+# CLAUDE CODE DEVCONTAINER - DEBIAN VARIANT
 # =============================================================================
-# This is the BASE configuration that other variants are derived from.
+# This variant uses Debian Bullseye for enhanced stability and enterprise use.
 # 
-# KEY FEATURES:
-# - Node.js 20 runtime on Ubuntu base
-# - Full Ubuntu package ecosystem
-# - Comprehensive development tools
-# - Standard package manager (apt)
-# - Largest image size (~1.2GB) but most compatible
+# KEY DIFFERENCES FROM UBUNTU BASE:
+# - Uses Debian Bullseye base image (node:20-bullseye)
+# - More conservative package versions
+# - Enhanced stability for long-term deployments
+# - Slightly smaller than Ubuntu (~1.1GB vs ~1.2GB)
+# - Enterprise-friendly package ecosystem
 # 
-# DIFFERENCES FROM OTHER VARIANTS:
-# - Uses apt package manager (vs apk for Alpine, yum for CentOS)
-# - Full Ubuntu toolchain and libraries
-# - Most comprehensive package availability
-# - Standard git-delta installation via .deb package
+# DEBIAN-SPECIFIC CHANGES:
+# - Same apt package manager as Ubuntu but different package versions
+# - More conservative package selection
+# - Enhanced security with ca-certificates package
+# - Same git-delta installation method as Ubuntu (.deb)
+# - No aggregate package (not available in Debian)
 # =============================================================================
 
-FROM node:20
+FROM node:20-bullseye
 
 ARG TZ
 ENV TZ="$TZ"
 
 # Install basic development tools and iptables/ipset
-# Ubuntu-specific: Uses apt package manager, comprehensive package names
+# Debian-specific: Uses apt like Ubuntu but with different package versions
 RUN apt update && apt install -y less \
   git \
   procps \
@@ -33,13 +34,13 @@ RUN apt update && apt install -y less \
   man-db \
   unzip \
   gnupg2 \
-  gh \
   iptables \
   ipset \
   iproute2 \
   dnsutils \
-  aggregate \
-  jq
+  jq \
+  wget \
+  ca-certificates
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -62,11 +63,11 @@ RUN mkdir -p /workspace /home/node/.claude && \
 
 WORKDIR /workspace
 
-# Ubuntu-specific: Install git-delta using .deb package
-# Other variants use different package formats (apk, tar.gz, etc.)
+# Debian-specific: Same git-delta installation as Ubuntu (.deb package)
+# Different from Alpine (.apk) and CentOS (tar.gz)
 RUN ARCH=$(dpkg --print-architecture) && \
   wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_${ARCH}.deb" && \
-  sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
+  dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
   rm "git-delta_0.18.2_${ARCH}.deb"
 
 # Set up non-root user

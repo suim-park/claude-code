@@ -1,5 +1,5 @@
 {
-  "name": "Claude Code Sandbox",
+  "name": "Claude Code CentOS",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {

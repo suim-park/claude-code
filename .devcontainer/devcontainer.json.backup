@@ -1,9 +1,9 @@
 {
-  "name": "Claude Code Sandbox",
+  "name": "Claude Code Alpine",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "TZ": "${localEnv:TZ:America/New_York}"
+      "TZ": "${localEnv:TZ:America/Los_Angeles}"
     }
   },
   "runArgs": [

@@ -1,30 +1,32 @@
 # =============================================================================
-# CLAUDE CODE DEVCONTAINER - UBUNTU VARIANT (BASE CONFIGURATION)
+# CLAUDE CODE DEVCONTAINER - ALPINE LINUX VARIANT
 # =============================================================================
-# This is the BASE configuration that other variants are derived from.
+# This variant is optimized for lightweight, fast startup environments.
 # 
-# KEY FEATURES:
-# - Node.js 20 runtime on Ubuntu base
-# - Full Ubuntu package ecosystem
-# - Comprehensive development tools
-# - Standard package manager (apt)
-# - Largest image size (~1.2GB) but most compatible
+# KEY DIFFERENCES FROM UBUNTU BASE:
+# - Uses Alpine Linux base image (node:20-alpine)
+# - Uses apk package manager instead of apt
+# - Smaller package names and different package ecosystem
+# - Minimal footprint (~800MB vs ~1.2GB)
+# - Security-focused with musl libc
+# - Faster startup times
 # 
-# DIFFERENCES FROM OTHER VARIANTS:
-# - Uses apt package manager (vs apk for Alpine, yum for CentOS)
-# - Full Ubuntu toolchain and libraries
-# - Most comprehensive package availability
-# - Standard git-delta installation via .deb package
+# ALPINE-SPECIFIC CHANGES:
+# - Package names: less, git, procps, sudo, fzf, zsh, man-db, unzip, gnupg
+# - Network tools: bind-tools instead of dnsutils
+# - git-delta installation via .apk package
+# - No aggregate package (not available in Alpine)
 # =============================================================================
 
-FROM node:20
+FROM node:20-alpine
 
 ARG TZ
 ENV TZ="$TZ"
 
 # Install basic development tools and iptables/ipset
-# Ubuntu-specific: Uses apt package manager, comprehensive package names
-RUN apt update && apt install -y less \
+# Alpine-specific: Uses apk package manager, different package names
+RUN apk add --no-cache \
+  less \
   git \
   procps \
   sudo \
@@ -32,14 +34,13 @@ RUN apt update && apt install -y less \
   zsh \
   man-db \
   unzip \
-  gnupg2 \
-  gh \
+  gnupg \
   iptables \
   ipset \
   iproute2 \
-  dnsutils \
-  aggregate \
-  jq
+  bind-tools \
+  jq \
+  bash
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -62,12 +63,11 @@ RUN mkdir -p /workspace /home/node/.claude && \
 
 WORKDIR /workspace
 
-# Ubuntu-specific: Install git-delta using .deb package
-# Other variants use different package formats (apk, tar.gz, etc.)
-RUN ARCH=$(dpkg --print-architecture) && \
-  wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_${ARCH}.deb" && \
-  sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
-  rm "git-delta_0.18.2_${ARCH}.deb"
+# Alpine-specific: Install git-delta using .apk package
+# Different from Ubuntu (.deb) and CentOS (tar.gz)
+RUN wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_x86_64.apk" && \
+  apk add --allow-untrusted "git-delta_0.18.2_x86_64.apk" && \
+  rm "git-delta_0.18.2_x86_64.apk"
 
 # Set up non-root user
 USER node

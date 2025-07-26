@@ -1,20 +1,22 @@
 # =============================================================================
-# CLAUDE CODE DEVCONTAINER - UBUNTU VARIANT (BASE CONFIGURATION)
+# CLAUDE CODE DEVCONTAINER - CENTOS/RHEL VARIANT
 # =============================================================================
-# This is the BASE configuration that other variants are derived from.
+# This variant is optimized for enterprise Linux environments and RHEL compatibility.
 # 
-# KEY FEATURES:
-# - Node.js 20 runtime on Ubuntu base
-# - Full Ubuntu package ecosystem
-# - Comprehensive development tools
-# - Standard package manager (apt)
-# - Largest image size (~1.2GB) but most compatible
+# KEY DIFFERENCES FROM UBUNTU BASE:
+# - Uses CentOS/RHEL base image (node:20 on CentOS)
+# - Uses yum package manager instead of apt
+# - Enterprise-grade security features
+# - SELinux support and enterprise package ecosystem
+# - Largest image size (~1.3GB) due to enterprise packages
+# - Slower startup but maximum compatibility
 # 
-# DIFFERENCES FROM OTHER VARIANTS:
-# - Uses apt package manager (vs apk for Alpine, yum for CentOS)
-# - Full Ubuntu toolchain and libraries
-# - Most comprehensive package availability
-# - Standard git-delta installation via .deb package
+# CENTOS-SPECIFIC CHANGES:
+# - Package names: procps-ng, iproute, bind-utils, gnupg2
+# - Network tools: bind-utils instead of dnsutils
+# - git-delta installation via tar.gz (no package manager)
+# - Additional which package for compatibility
+# - Enterprise-focused package selection
 # =============================================================================
 
 FROM node:20
@@ -23,23 +25,24 @@ ARG TZ
 ENV TZ="$TZ"
 
 # Install basic development tools and iptables/ipset
-# Ubuntu-specific: Uses apt package manager, comprehensive package names
-RUN apt update && apt install -y less \
+# CentOS-specific: Uses yum package manager, different package names
+RUN yum update -y && yum install -y less \
   git \
-  procps \
+  procps-ng \
   sudo \
   fzf \
   zsh \
   man-db \
   unzip \
   gnupg2 \
-  gh \
   iptables \
   ipset \
-  iproute2 \
-  dnsutils \
-  aggregate \
-  jq
+  iproute \
+  bind-utils \
+  jq \
+  wget \
+  ca-certificates \
+  which
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -62,12 +65,12 @@ RUN mkdir -p /workspace /home/node/.claude && \
 
 WORKDIR /workspace
 
-# Ubuntu-specific: Install git-delta using .deb package
-# Other variants use different package formats (apk, tar.gz, etc.)
-RUN ARCH=$(dpkg --print-architecture) && \
-  wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_${ARCH}.deb" && \
-  sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
-  rm "git-delta_0.18.2_${ARCH}.deb"
+# CentOS-specific: Install git-delta using tar.gz (no package manager)
+# Different from Ubuntu/Debian (.deb) and Alpine (.apk)
+RUN wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta-0.18.2-x86_64-unknown-linux-gnu.tar.gz" && \
+  tar -xzf "git-delta-0.18.2-x86_64-unknown-linux-gnu.tar.gz" && \
+  cp git-delta-0.18.2-x86_64-unknown-linux-gnu/git-delta /usr/local/bin/ && \
+  rm -rf "git-delta-0.18.2-x86_64-unknown-linux-gnu.tar.gz" "git-delta-0.18.2-x86_64-unknown-linux-gnu"
 
 # Set up non-root user
 USER node

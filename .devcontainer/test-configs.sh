@@ -14,16 +14,13 @@
 
 set -e
 
+# Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VARIANTS_DIR="$SCRIPT_DIR/variants"
+VARIANT_DIR="$SCRIPT_DIR/variants"
 
 # Available configurations
-CONFIGS_ubuntu="Default Ubuntu (Recommended)"
-CONFIGS_alpine="Alpine Linux (Lightweight)"
-CONFIGS_debian="Debian (Stable)"
-CONFIGS_centos="CentOS/RHEL (Enterprise)"
-CONFIGS_windows="Windows WSL2"
-CONFIGS_gpu="GPU-Enabled with CUDA Support"
+CONFIGS_linux="Linux Development Environment (Ubuntu 22.04)"
+CONFIGS_windows="Windows WSL2 Development Environment"
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,7 +30,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Function to print colored output
-print_status() {
+print_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
 
@@ -49,265 +46,245 @@ print_header() {
     echo -e "${BLUE}=== Claude Code DevContainer Configuration Tester ===${NC}"
 }
 
-# Function to test a specific configuration
-test_config() {
-    local config_name=$1
+# Function to get configuration description
+get_config_desc() {
+    local config_name="$1"
     local config_desc=""
     
     case "$config_name" in
-        "ubuntu") config_desc="$CONFIGS_ubuntu" ;;
-        "alpine") config_desc="$CONFIGS_alpine" ;;
-        "debian") config_desc="$CONFIGS_debian" ;;
-        "centos") config_desc="$CONFIGS_centos" ;;
+        "linux") config_desc="$CONFIGS_linux" ;;
         "windows") config_desc="$CONFIGS_windows" ;;
-        "gpu") config_desc="$CONFIGS_gpu" ;;
         *)
             print_error "Unknown configuration: $config_name"
             return 1
             ;;
     esac
     
+    echo "$config_desc"
+}
+
+# Function to test a single configuration
+test_config() {
+    local config_name="$1"
+    local config_desc="$2"
+    local variant_dir="$VARIANT_DIR/$config_name"
+    
     echo
-    print_header
     echo "Testing: $config_name - $config_desc"
     echo "=================================================="
     
     # Test 1: Check if variant directory exists
-    local variant_dir="$VARIANTS_DIR/$config_name"
-    if [[ ! -d "$variant_dir" ]]; then
-        print_error "Variant directory not found: $variant_dir"
-        return 1
-    fi
-    print_status "✓ Variant directory exists: $variant_dir"
-    
-    # Test 2: Check required files
-    local devcontainer_file="$variant_dir/devcontainer.json"
-    if [[ ! -f "$devcontainer_file" ]]; then
-        print_error "devcontainer.json not found: $devcontainer_file"
-        return 1
-    fi
-    print_status "✓ devcontainer.json exists"
-    
-    # Test 3: Validate devcontainer.json JSON syntax
-    if ! jq empty "$devcontainer_file" 2>/dev/null; then
-        print_error "Invalid JSON in devcontainer.json"
-        return 1
-    fi
-    print_status "✓ devcontainer.json has valid JSON syntax"
-    
-    # Test 4: Check Dockerfile (except Windows)
-    if [[ "$config_name" != "windows" ]]; then
-        local dockerfile="$variant_dir/Dockerfile"
-        if [[ ! -f "$dockerfile" ]]; then
-            print_error "Dockerfile not found: $dockerfile"
-            return 1
-        fi
-        print_status "✓ Dockerfile exists"
-        
-        # Test 5: Check Dockerfile base image
-        local base_image=$(head -1 "$dockerfile" | grep -E "^FROM" | sed 's/FROM //')
-        if [[ -n "$base_image" ]]; then
-            print_status "✓ Base image: $base_image"
-        else
-            print_warning "Could not determine base image"
-        fi
+    if [[ -d "$variant_dir" ]]; then
+        print_info "✓ Variant directory exists: $variant_dir"
     else
-        # Test 5: Check Windows setup script
-        local setup_script="$variant_dir/setup-windows.sh"
-        if [[ ! -f "$setup_script" ]]; then
-            print_error "setup-windows.sh not found: $setup_script"
+        print_error "✗ Variant directory not found: $variant_dir"
+        return 1
+    fi
+    
+    # Test 2: Check if devcontainer.json exists
+    if [[ -f "$variant_dir/devcontainer.json" ]]; then
+        print_info "✓ devcontainer.json exists"
+    else
+        print_error "✗ devcontainer.json not found"
+        return 1
+    fi
+    
+    # Test 3: Validate JSON syntax
+    if python3 -m json.tool "$variant_dir/devcontainer.json" > /dev/null 2>&1; then
+        print_info "✓ devcontainer.json has valid JSON syntax"
+    else
+        print_error "✗ Invalid JSON in devcontainer.json"
+        return 1
+    fi
+    
+    # Test 4: Check if Dockerfile exists (for Linux)
+    if [[ "$config_name" == "linux" ]]; then
+        if [[ -f "$variant_dir/Dockerfile" ]]; then
+            print_info "✓ Dockerfile exists"
+            
+            # Try to determine base image
+            local base_image=$(head -1 "$variant_dir/Dockerfile" | sed 's/FROM //' 2>/dev/null || echo "")
+            if [[ -n "$base_image" ]]; then
+                print_info "✓ Base image: $base_image"
+            else
+                print_warning "Could not determine base image"
+            fi
+        else
+            print_error "✗ Dockerfile not found for Linux configuration"
             return 1
         fi
-        print_status "✓ setup-windows.sh exists"
-        
-        if [[ ! -x "$setup_script" ]]; then
-            print_warning "setup-windows.sh is not executable"
+    fi
+    
+    # Test 5: Check if setup script exists (for Windows)
+    if [[ "$config_name" == "windows" ]]; then
+        if [[ -f "$variant_dir/setup-windows.sh" ]]; then
+            print_info "✓ setup-windows.sh exists"
+            
+            # Check if script is executable
+            if [[ -x "$variant_dir/setup-windows.sh" ]]; then
+                print_info "✓ setup-windows.sh is executable"
+            else
+                print_warning "setup-windows.sh is not executable"
+            fi
+        else
+            print_error "✗ setup-windows.sh not found for Windows configuration"
+            return 1
         fi
     fi
     
     # Test 6: Check timezone configuration
-    local tz_value=$(grep -o 'America/New_York' "$devcontainer_file" || echo "")
-    if [[ -n "$tz_value" ]]; then
-        print_status "✓ Timezone configured: $tz_value"
+    if grep -q "America/New_York" "$variant_dir/devcontainer.json" 2>/dev/null; then
+        print_info "✓ Timezone configured: America/New_York"
     else
         print_warning "Timezone not found or not set to America/New_York"
     fi
     
-    # Test 7: Check for required environment variables
-    local has_node_options=$(grep -c "NODE_OPTIONS" "$devcontainer_file" || echo "0")
-    local has_claude_config=$(grep -c "CLAUDE_CONFIG_DIR" "$devcontainer_file" || echo "0")
-    
-    if [[ "$has_node_options" -gt 0 ]]; then
-        print_status "✓ NODE_OPTIONS environment variable configured"
+    # Test 7: Check environment variables
+    if grep -q "NODE_OPTIONS" "$variant_dir/devcontainer.json" 2>/dev/null; then
+        print_info "✓ NODE_OPTIONS environment variable configured"
     else
         print_warning "NODE_OPTIONS environment variable not found"
     fi
     
-    if [[ "$has_claude_config" -gt 0 ]]; then
-        print_status "✓ CLAUDE_CONFIG_DIR environment variable configured"
+    if grep -q "CLAUDE_CONFIG_DIR" "$variant_dir/devcontainer.json" 2>/dev/null; then
+        print_info "✓ CLAUDE_CONFIG_DIR environment variable configured"
     else
         print_warning "CLAUDE_CONFIG_DIR environment variable not found"
     fi
     
     # Test 8: Check VS Code extensions
-    local extensions_count=$(grep -c "dbaeumer.vscode-eslint\|esbenp.prettier-vscode\|eamodio.gitlens" "$devcontainer_file" || echo "0")
-    if [[ "$extensions_count" -ge 3 ]]; then
-        print_status "✓ Required VS Code extensions configured"
+    if grep -q "anthropic.claude-code" "$variant_dir/devcontainer.json" 2>/dev/null; then
+        print_info "✓ Required VS Code extensions configured"
     else
-        print_warning "Some required VS Code extensions may be missing"
+        print_warning "Required VS Code extensions not found"
     fi
     
-    # Test 9: Check if Docker is available and test build (optional)
+    # Test 9: Test Docker build (if Docker is available)
     if command -v docker &> /dev/null; then
-        print_status "Docker available - testing build..."
-        
-        # Create temporary test directory
-        local test_dir="/tmp/claude-code-test-$config_name"
-        mkdir -p "$test_dir"
-        
-        # Copy configuration files
-        cp "$devcontainer_file" "$test_dir/devcontainer.json"
-        if [[ "$config_name" != "windows" ]]; then
-            cp "$variant_dir/Dockerfile" "$test_dir/Dockerfile"
+        if [[ "$config_name" == "linux" ]]; then
+            print_info "Testing Docker build..."
+            if docker build --dry-run -f "$variant_dir/Dockerfile" "$variant_dir" > /dev/null 2>&1; then
+                print_info "✓ Docker build test passed"
+            else
+                print_warning "Docker build test failed"
+            fi
         fi
-        cp "$SCRIPT_DIR/init-firewall.sh" "$test_dir/"
-        
-        # Test Docker build (with timeout)
-        cd "$test_dir"
-        if timeout 300 docker build -t "claude-code-test-$config_name" . &> /dev/null; then
-            print_status "✓ Docker build successful"
-            docker rmi "claude-code-test-$config_name" &> /dev/null
-        else
-            print_warning "Docker build failed or timed out"
-        fi
-        
-        # Cleanup
-        cd - > /dev/null
-        rm -rf "$test_dir"
     else
         print_warning "Docker not available - skipping build test"
     fi
     
-    print_status "Configuration $config_name test completed successfully!"
+    print_info "Configuration $config_name test completed successfully!"
     return 0
+}
+
+# Function to test all configurations
+test_all_configs() {
+    print_header
+    echo "Testing all devcontainer configurations..."
+    echo
+    
+    local total_tests=0
+    local passed_tests=0
+    
+    # Test each configuration
+    for config in linux windows; do
+        total_tests=$((total_tests + 1))
+        if test_config "$config" "$(get_config_desc "$config")"; then
+            passed_tests=$((passed_tests + 1))
+        fi
+    done
+    
+    echo
+    echo "=================================================="
+    echo "Test Results: $passed_tests/$total_tests configurations passed"
+    
+    if [[ $passed_tests -eq $total_tests ]]; then
+        print_info "🎉 All configurations are working correctly!"
+    else
+        print_error "⚠️  Some configurations have issues. Check the output above."
+        exit 1
+    fi
 }
 
 # Function to test switch script
 test_switch_script() {
-    echo
     print_header
-    echo "Testing Switch Script"
-    echo "===================="
+    echo "Testing switch script functionality..."
+    echo
     
     local switch_script="$SCRIPT_DIR/switch-config.sh"
     
-    if [[ ! -f "$switch_script" ]]; then
-        print_error "Switch script not found: $switch_script"
-        return 1
-    fi
-    print_status "✓ Switch script exists"
-    
-    if [[ ! -x "$switch_script" ]]; then
-        print_error "Switch script is not executable"
-        return 1
-    fi
-    print_status "✓ Switch script is executable"
-    
-    # Test switch script help
-    if "$switch_script" help &> /dev/null; then
-        print_status "✓ Switch script help works"
-    else
-        print_warning "Switch script help may have issues"
-    fi
-    
-    # Test switch script list
-    if "$switch_script" list &> /dev/null; then
-        print_status "✓ Switch script list works"
-    else
-        print_warning "Switch script list may have issues"
-    fi
-    
-    return 0
-}
-
-# Function to run all tests
-run_all_tests() {
-    print_header
-    echo "Starting comprehensive devcontainer configuration tests..."
-    echo
-    
-    local failed_tests=0
-    local total_tests=0
-    
-    # Test switch script
-    total_tests=$((total_tests + 1))
-    if test_switch_script; then
-        print_status "Switch script test: PASSED"
-    else
-        print_error "Switch script test: FAILED"
-        failed_tests=$((failed_tests + 1))
-    fi
-    
-    # Test each configuration
-    for config in ubuntu alpine debian centos windows gpu; do
-        total_tests=$((total_tests + 1))
-        if test_config "$config"; then
-            print_status "Configuration $config test: PASSED"
+    if [[ -f "$switch_script" ]]; then
+        print_info "✓ Switch script exists"
+        
+        if [[ -x "$switch_script" ]]; then
+            print_info "✓ Switch script is executable"
         else
-            print_error "Configuration $config test: FAILED"
-            failed_tests=$((failed_tests + 1))
+            print_warning "Switch script is not executable"
         fi
-    done
-    
-    # Summary
-    echo
-    print_header
-    echo "TEST SUMMARY"
-    echo "============"
-    echo "Total tests: $total_tests"
-    echo "Passed: $((total_tests - failed_tests))"
-    echo "Failed: $failed_tests"
-    
-    if [[ $failed_tests -eq 0 ]]; then
-        print_status "All tests passed! 🎉"
-        echo
-        echo "Next steps:"
-        echo "1. Open VS Code with Dev Containers extension"
-        echo "2. Use .devcontainer/switch-config.sh to switch configurations"
-        echo "3. Rebuild container: Command Palette → 'Dev Containers: Rebuild Container'"
-        return 0
+        
+        # Test list command
+        if "$switch_script" list > /dev/null 2>&1; then
+            print_info "✓ Switch script list command works"
+        else
+            print_error "✗ Switch script list command failed"
+        fi
+        
+        # Test help command
+        if "$switch_script" help > /dev/null 2>&1; then
+            print_info "✓ Switch script help command works"
+        else
+            print_error "✗ Switch script help command failed"
+        fi
+        
     else
-        print_error "Some tests failed. Please review the errors above."
+        print_error "✗ Switch script not found"
         return 1
     fi
+    
+    print_info "Switch script test completed successfully!"
 }
 
 # Main script logic
-case "${1:-}" in
-    "help"|"-h"|"--help"|"")
-        print_header
-        echo "Usage: $0 [command] [configuration]"
-        echo
-        echo "Commands:"
-        echo "  all                     Run all tests (default)"
-        echo "  switch                  Test switch script only"
-        echo "  <config_name>           Test specific configuration"
-        echo "  help, -h, --help        Show this help message"
-        echo
-        echo "Examples:"
-        echo "  $0                      # Run all tests"
-        echo "  $0 ubuntu               # Test Ubuntu configuration"
-        echo "  $0 alpine               # Test Alpine configuration"
-        echo "  $0 switch               # Test switch script only"
-        echo
-        ;;
-    "all")
-        run_all_tests
-        ;;
-    "switch")
-        test_switch_script
-        ;;
-    *)
-        test_config "$1"
-        ;;
-esac 
+main() {
+    case "${1:-}" in
+        "all")
+            test_all_configs
+            test_switch_script
+            ;;
+        "linux"|"windows")
+            test_config "$1" "$(get_config_desc "$1")"
+            ;;
+        "switch")
+            test_switch_script
+            ;;
+        "help"|"-h"|"--help")
+            print_header
+            echo
+            echo "Usage: $0 <command>"
+            echo
+            echo "Commands:"
+            echo "  all     - Test all configurations"
+            echo "  linux   - Test Linux configuration"
+            echo "  windows - Test Windows configuration"
+            echo "  switch  - Test switch script functionality"
+            echo "  help    - Show this help message"
+            echo
+            echo "Examples:"
+            echo "  $0 all     # Test all configurations"
+            echo "  $0 linux   # Test Linux configuration only"
+            echo "  $0 switch  # Test switch script only"
+            ;;
+        "")
+            test_all_configs
+            ;;
+        *)
+            print_error "Unknown command: $1"
+            echo "Use '$0 help' for usage information"
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@" 

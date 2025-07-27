@@ -1,45 +1,40 @@
 {
-  "name": "Claude Code Sandbox - GPU with CUDA",
+  "name": "Claude Code Sandbox - Linux",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
       "TZ": "${localEnv:TZ:America/New_York}",
-      "CUDA_VERSION": "${localEnv:CUDA_VERSION:11.8}",
-      "CUDNN_VERSION": "${localEnv:CUDNN_VERSION:8}",
-      "PYTHON_VERSION": "${localEnv:PYTHON_VERSION:3.11}",
-      "UBUNTU_VERSION": "${localEnv:UBUNTU_VERSION:20.04}"
+      "UBUNTU_VERSION": "${localEnv:UBUNTU_VERSION:22.04}",
+      "NODE_VERSION": "${localEnv:NODE_VERSION:20}",
+      "PYTHON_VERSION": "${localEnv:PYTHON_VERSION:3.11}"
     }
   },
   "runArgs": [
-    "--gpus=all",
-    "--device=nvidia.com/gpu=0",
-    "--runtime=nvidia",
-    "--shm-size=2g",
-    "--memory=16g",
-    "--cpus=4",
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW",
-    "--cap-add=SYS_ADMIN",
-    "--ulimit=memlock=-1",
-    "--ulimit=stack=67108864"
+    "--shm-size=1g"
   ],
   "customizations": {
     "vscode": {
       "extensions": [
         "esbenp.prettier-vscode",
         "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "eamodio.gitlens",
+        "ms-vscode.vscode-json",
         "ms-python.python",
+        "ms-python.vscode-pylance",
         "ms-toolsai.jupyter",
         "ms-toolsai.vscode-jupyter-cell-tags",
         "ms-toolsai.jupyter-keymap",
         "ms-toolsai.vscode-jupyter-renderers",
         "ms-toolsai.vscode-jupyter-slideshow",
-        "ms-python.vscode-pylance",
         "ms-vscode.cpptools",
         "ms-vscode.cmake-tools",
-        "ms-vscode.vscode-json",
-        "eamodio.gitlens",
-        "ms-vscode.hexeditor"
+        "ms-vscode.hexeditor",
+        "ms-vscode.vscode-typescript-next",
+        "ms-vscode.vscode-js-debug",
+        "ms-vscode.vscode-js-debug-companion"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -114,36 +109,23 @@
   "mounts": [
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
     "source=claude-code-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    "source=claude-code-gpu-cache-${devcontainerId},target=/home/node/.cache,type=volume"
+    "source=claude-code-cache-${devcontainerId},target=/home/node/.cache,type=volume"
   ],
   "remoteEnv": {
-    "CUDA_HOME": "/usr/local/cuda",
-    "PATH": "${containerEnv:PATH}:/usr/local/cuda/bin",
-    "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64",
-    "XLA_FLAGS": "--xla_gpu_cuda_data_dir=/usr/local/cuda",
-    "NVIDIA_VISIBLE_DEVICES": "all",
-    "NVIDIA_DRIVER_CAPABILITIES": "compute,utility,graphics",
-    "NVIDIA_REQUIRE_CUDA": "cuda>=11.8",
-    "PYTHONPATH": "/workspace:/usr/local/lib/python3.11/site-packages",
-    "PYTHONUNBUFFERED": "1",
-    "PYTHONDONTWRITEBYTECODE": "1",
-    "JUPYTER_ENABLE_LAB": "yes",
-    "JUPYTER_TOKEN": "",
-    "NODE_OPTIONS": "--max-old-space-size=8192",
+    "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
     "DEVCONTAINER": "true",
     "TZ": "America/New_York",
-    "OMP_NUM_THREADS": "4",
-    "MKL_NUM_THREADS": "4",
-    "NUMBA_NUM_THREADS": "4",
-    "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-    "TF_CPP_MIN_LOG_LEVEL": "2",
-    "CUDA_LAUNCH_BLOCKING": "0"
+    "PYTHONPATH": "/workspace:/usr/local/lib/python3.11/site-packages",
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "JUPYTER_ENABLE_LAB": "yes",
+    "JUPYTER_TOKEN": ""
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh && /usr/local/bin/setup-gpu.sh",
+  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.11"
@@ -154,15 +136,13 @@
   "forwardPorts": [
     8888,
     8889,
-    6006,
-    8080,
-    3000
+    3000,
+    8080
   ],
   "appPort": [
     "8888:8888",
     "8889:8889",
-    "6006:6006",
-    "8080:8080",
-    "3000:3000"
+    "3000:3000",
+    "8080:8080"
   ]
 } 

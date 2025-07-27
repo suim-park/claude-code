@@ -1,19 +1,38 @@
 {
-  "name": "Claude Code Windows",
+  "name": "Claude Code Sandbox - Windows",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
-    },
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+  "build": {
+    "args": {
+      "TZ": "${localEnv:TZ:America/New_York}",
+      "VARIANT": "ubuntu"
+    }
   },
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "eamodio.gitlens"
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "eamodio.gitlens",
+        "ms-vscode.vscode-json",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.vscode-jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.hexeditor",
+        "ms-vscode.vscode-typescript-next",
+        "ms-vscode.vscode-js-debug",
+        "ms-vscode.vscode-js-debug-companion",
+        "ms-vscode.remote-wsl"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -21,6 +40,10 @@
         "editor.codeActionsOnSave": {
           "source.fixAll.eslint": "explicit"
         },
+        "editor.rulers": [80, 100],
+        "editor.wordWrap": "on",
+        "editor.minimap.enabled": true,
+        "editor.suggestSelection": "first",
         "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
           "bash": {
@@ -30,21 +53,96 @@
           "zsh": {
             "path": "zsh"
           }
-        }
+        },
+        "terminal.integrated.fontSize": 14,
+        "terminal.integrated.lineHeight": 1.2,
+        "python.defaultInterpreterPath": "/usr/local/bin/python3",
+        "python.terminal.activateEnvironment": true,
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.sortImports.args": ["--profile", "black"],
+        "jupyter.askForKernelRestart": false,
+        "jupyter.enableAutoMatting": true,
+        "jupyter.interactiveWindow.creationMode": "perFile",
+        "jupyter.notebookFileRoot": "/workspace",
+        "files.associations": {
+          "*.cu": "cuda",
+          "*.cuh": "cuda",
+          "*.cubin": "cuda"
+        },
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          "**/.pytest_cache": true,
+          "**/.coverage": true,
+          "**/.mypy_cache": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/bower_components": true,
+          "**/*.code-search": true,
+          "**/__pycache__": true,
+          "**/*.pyc": true
+        },
+        "git.enableSmartCommit": true,
+        "git.confirmSync": false,
+        "git.autofetch": true,
+        "workbench.colorTheme": "Default Dark+",
+        "workbench.iconTheme": "vs-seti",
+        "workbench.startupEditor": "newUntitledFile",
+        "files.watcherExclude": {
+          "**/target": true,
+          "**/node_modules/**": true,
+          "**/__pycache__/**": true,
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/tmp/**": true,
+          "**/bower_components/**": true
+        },
+        "remote.WSL.enabled": true,
+        "remote.WSL.debug": false
       }
     }
   },
   "remoteUser": "vscode",
   "mounts": [
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    "source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume"
+    "source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume",
+    "source=claude-code-cache-${devcontainerId},target=/home/vscode/.cache,type=volume"
   ],
   "remoteEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
-    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
+    "DEVCONTAINER": "true",
+    "TZ": "America/New_York",
+    "PYTHONPATH": "/workspace:/usr/local/lib/python3.11/site-packages",
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "JUPYTER_ENABLE_LAB": "yes",
+    "JUPYTER_TOKEN": ""
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  "postCreateCommand": "bash .devcontainer/setup-windows.sh"
+  "postCreateCommand": "bash /usr/local/bin/setup-windows.sh",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [
+    8888,
+    8889,
+    3000,
+    8080
+  ],
+  "appPort": [
+    "8888:8888",
+    "8889:8889",
+    "3000:3000",
+    "8080:8080"
+  ]
 } 

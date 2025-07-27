@@ -1,20 +1,28 @@
 #!/bin/bash
 
-# Claude Code DevContainer Configuration Switcher
-# This script helps you easily switch between different devcontainer configurations
+# =============================================================================
+# CLAUDE CODE DEVCONTAINER CONFIGURATION SWITCHER
+# =============================================================================
+# This script allows you to easily switch between different devcontainer
+# configurations based on operating system requirements.
+# 
+# USAGE:
+#   ./switch-config.sh <config_name>
+#   ./switch-config.sh list
+#   ./switch-config.sh help
+# 
+# AVAILABLE CONFIGURATIONS:
+#   linux   - Linux development environment (Ubuntu 22.04)
+#   windows - Windows WSL2 development environment
+# =============================================================================
 
-set -e
-
+# Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VARIANTS_DIR="$SCRIPT_DIR/variants"
+VARIANT_DIR="$SCRIPT_DIR/variants"
 
 # Available configurations
-CONFIGS_ubuntu="Default Ubuntu (Recommended)"
-CONFIGS_alpine="Alpine Linux (Lightweight)"
-CONFIGS_debian="Debian (Stable)"
-CONFIGS_centos="CentOS/RHEL (Enterprise)"
-CONFIGS_windows="Windows WSL2"
-CONFIGS_gpu="GPU-Enabled with CUDA Support"
+CONFIGS_linux="Linux Development Environment (Ubuntu 22.04)"
+CONFIGS_windows="Windows WSL2 Development Environment"
 
 # Colors for output
 RED='\033[0;31m'
@@ -24,7 +32,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Function to print colored output
-print_status() {
+print_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
 
@@ -40,32 +48,46 @@ print_header() {
     echo -e "${BLUE}=== Claude Code DevContainer Configuration Switcher ===${NC}"
 }
 
-# Function to show available configurations
-show_configs() {
+# Function to show help
+show_help() {
+    print_header
+    echo
+    echo "Usage: $0 <config_name>"
+    echo "       $0 list"
+    echo "       $0 help"
+    echo
+    echo "Available configurations:"
+    echo "  linux   - Linux development environment (Ubuntu 22.04)"
+    echo "  windows - Windows WSL2 development environment"
+    echo
+    echo "Examples:"
+    echo "  $0 linux    # Switch to Linux configuration"
+    echo "  $0 windows  # Switch to Windows WSL2 configuration"
+    echo "  $0 list     # List all available configurations"
+    echo
+    echo "After switching, rebuild your devcontainer:"
+    echo "  Command Palette → 'Dev Containers: Rebuild Container'"
+}
+
+# Function to list available configurations
+list_configs() {
     print_header
     echo "Available configurations:"
     echo
-    echo "  ubuntu - $CONFIGS_ubuntu"
-    echo "  alpine - $CONFIGS_alpine"
-    echo "  debian - $CONFIGS_debian"
-    echo "  centos - $CONFIGS_centos"
+    echo "  linux - $CONFIGS_linux"
     echo "  windows - $CONFIGS_windows"
-    echo "  gpu - $CONFIGS_gpu"
     echo
+    echo "Use '$0 <config_name>' to switch to a configuration"
 }
 
-# Function to switch to a specific configuration
-switch_config() {
-    local config_name=$1
+# Function to get configuration description
+get_config_desc() {
+    local config_name="$1"
     local config_desc=""
     
     case "$config_name" in
-        "ubuntu") config_desc="$CONFIGS_ubuntu" ;;
-        "alpine") config_desc="$CONFIGS_alpine" ;;
-        "debian") config_desc="$CONFIGS_debian" ;;
-        "centos") config_desc="$CONFIGS_centos" ;;
+        "linux") config_desc="$CONFIGS_linux" ;;
         "windows") config_desc="$CONFIGS_windows" ;;
-        "gpu") config_desc="$CONFIGS_gpu" ;;
         *)
             print_error "Unknown configuration: $config_name"
             echo "Use '$0 list' to see available configurations"
@@ -73,44 +95,46 @@ switch_config() {
             ;;
     esac
     
-    print_status "Switching to $config_desc configuration..."
+    echo "$config_desc"
+}
+
+# Function to switch configuration
+switch_config() {
+    local config_name="$1"
+    local config_desc="$2"
+    local variant_dir="$VARIANT_DIR/$config_name"
     
-    # Check if configuration files exist
-    local variant_dir="$VARIANTS_DIR/$config_name"
-    local devcontainer_file="$variant_dir/devcontainer.json"
-    local dockerfile_file="$variant_dir/Dockerfile"
+    print_header
+    echo "Switching to: $config_desc"
+    echo "=================================================="
     
+    # Check if variant directory exists
     if [[ ! -d "$variant_dir" ]]; then
-        print_error "Variant directory not found: $variant_dir"
+        print_error "Configuration directory not found: $variant_dir"
         exit 1
     fi
     
-    if [[ ! -f "$devcontainer_file" ]]; then
-        print_error "Configuration file not found: $devcontainer_file"
+    # Check if devcontainer.json exists
+    if [[ ! -f "$variant_dir/devcontainer.json" ]]; then
+        print_error "devcontainer.json not found in $variant_dir"
         exit 1
     fi
     
-    # Backup current configuration if it exists
+    # Create backup of current configuration
     if [[ -f "$SCRIPT_DIR/devcontainer.json" ]]; then
-        cp "$SCRIPT_DIR/devcontainer.json" "$SCRIPT_DIR/devcontainer.json.backup"
-        print_status "Backed up current configuration to devcontainer.json.backup"
+        local backup_file="$SCRIPT_DIR/devcontainer.json.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$SCRIPT_DIR/devcontainer.json" "$backup_file"
+        print_info "Backup created: $(basename "$backup_file")"
     fi
     
-    if [[ -f "$SCRIPT_DIR/Dockerfile" ]]; then
-        cp "$SCRIPT_DIR/Dockerfile" "$SCRIPT_DIR/Dockerfile.backup"
-        print_status "Backed up current Dockerfile to Dockerfile.backup"
-    fi
-    
-    # Copy new configuration
-    cp "$devcontainer_file" "$SCRIPT_DIR/devcontainer.json"
-    print_status "Updated devcontainer.json"
+    # Copy configuration files
+    cp "$variant_dir/devcontainer.json" "$SCRIPT_DIR/devcontainer.json"
+    print_info "Copied devcontainer.json"
     
     # Copy Dockerfile if it exists
-    if [[ -f "$dockerfile_file" ]]; then
-        cp "$dockerfile_file" "$SCRIPT_DIR/Dockerfile"
-        print_status "Updated Dockerfile"
-    else
-        print_warning "No Dockerfile found for $config_name configuration"
+    if [[ -f "$variant_dir/Dockerfile" ]]; then
+        cp "$variant_dir/Dockerfile" "$SCRIPT_DIR/Dockerfile"
+        print_info "Copied Dockerfile"
     fi
     
     # Special handling for Windows configuration
@@ -119,156 +143,98 @@ switch_config() {
         if [[ -f "$setup_script" ]]; then
             cp "$setup_script" "$SCRIPT_DIR/setup-windows.sh"
             chmod +x "$SCRIPT_DIR/setup-windows.sh"
-            print_status "Copied and made setup-windows.sh executable"
+            print_info "Copied and made setup-windows.sh executable"
         else
             print_warning "setup-windows.sh not found for Windows configuration"
         fi
     fi
     
-    # Special handling for GPU configuration
-    if [[ "$config_name" == "gpu" ]]; then
-        local setup_script="$variant_dir/setup-gpu.sh"
-        if [[ -f "$setup_script" ]]; then
-            cp "$setup_script" "$SCRIPT_DIR/setup-gpu.sh"
-            chmod +x "$SCRIPT_DIR/setup-gpu.sh"
-            print_status "Copied and made setup-gpu.sh executable"
-        else
-            print_warning "setup-gpu.sh not found for GPU configuration"
-        fi
-    fi
-    
-    print_status "Successfully switched to $config_desc configuration!"
+    print_info "Successfully switched to $config_desc configuration!"
     echo
-    print_warning "You need to rebuild your devcontainer for changes to take effect:"
-    echo "  1. Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)"
-    echo "  2. Run 'Dev Containers: Rebuild Container'"
-    echo "  3. Or close and reopen the project in VS Code"
+    echo "Next steps:"
+    echo "1. Rebuild your devcontainer:"
+    echo "   Command Palette → 'Dev Containers: Rebuild Container'"
+    echo "2. Or restart VS Code and reopen in container"
+    echo
+    echo "Configuration files:"
+    echo "  - devcontainer.json: Main configuration"
+    if [[ -f "$SCRIPT_DIR/Dockerfile" ]]; then
+        echo "  - Dockerfile: Container build instructions"
+    fi
+    if [[ -f "$SCRIPT_DIR/setup-windows.sh" ]]; then
+        echo "  - setup-windows.sh: Windows-specific setup script"
+    fi
 }
 
-# Function to restore backup
-restore_backup() {
-    if [[ -f "$SCRIPT_DIR/devcontainer.json.backup" ]]; then
-        cp "$SCRIPT_DIR/devcontainer.json.backup" "$SCRIPT_DIR/devcontainer.json"
-        print_status "Restored devcontainer.json from backup"
+# Function to get current configuration
+get_current_config() {
+    local current_config=""
+    
+    if [[ -f "$SCRIPT_DIR/devcontainer.json" ]]; then
+        # Try to determine current configuration based on content
+        if grep -q '"name".*"Linux"' "$SCRIPT_DIR/devcontainer.json" 2>/dev/null; then
+            current_config="linux"
+        elif grep -q '"name".*"Windows"' "$SCRIPT_DIR/devcontainer.json" 2>/dev/null; then
+            current_config="windows"
+        else
+            current_config="unknown"
+        fi
+    else
+        current_config="none"
     fi
     
-    if [[ -f "$SCRIPT_DIR/Dockerfile.backup" ]]; then
-        cp "$SCRIPT_DIR/Dockerfile.backup" "$SCRIPT_DIR/Dockerfile"
-        print_status "Restored Dockerfile from backup"
-    fi
-    
-    print_status "Backup restored successfully!"
+    echo "$current_config"
 }
 
 # Function to show current configuration
-show_current() {
-    print_header
-    echo "Current configuration:"
-    echo
-    
-    if [[ -f "$SCRIPT_DIR/devcontainer.json" ]]; then
-        local name=$(grep '"name"' "$SCRIPT_DIR/devcontainer.json" | head -1 | sed 's/.*"name": *"\([^"]*\)".*/\1/')
-        echo "  Name: $name"
-        
-        local dockerfile=$(grep '"dockerfile"' "$SCRIPT_DIR/devcontainer.json" | head -1 | sed 's/.*"dockerfile": *"\([^"]*\)".*/\1/')
-        if [[ -n "$dockerfile" ]]; then
-            echo "  Dockerfile: $dockerfile"
-        fi
-        
-        local image=$(grep '"image"' "$SCRIPT_DIR/devcontainer.json" | head -1 | sed 's/.*"image": *"\([^"]*\)".*/\1/')
-        if [[ -n "$image" ]]; then
-            echo "  Image: $image"
-        fi
-    else
-        print_error "No devcontainer.json found"
-    fi
-    echo
-}
-
-# Function to show variant information
-show_variant_info() {
-    local config_name=$1
+show_current_config() {
+    local current_config=$(get_current_config)
     local config_desc=""
     
-    case "$config_name" in
-        "ubuntu") config_desc="$CONFIGS_ubuntu" ;;
-        "alpine") config_desc="$CONFIGS_alpine" ;;
-        "debian") config_desc="$CONFIGS_debian" ;;
-        "centos") config_desc="$CONFIGS_centos" ;;
+    case "$current_config" in
+        "linux") config_desc="$CONFIGS_linux" ;;
         "windows") config_desc="$CONFIGS_windows" ;;
-        "gpu") config_desc="$CONFIGS_gpu" ;;
+        "unknown") config_desc="Unknown configuration" ;;
+        "none") config_desc="No configuration set" ;;
         *)
-            print_error "Unknown configuration: $config_name"
+            print_error "Unknown configuration: $current_config"
             exit 1
             ;;
     esac
     
-    local variant_dir="$VARIANTS_DIR/$config_name"
-    
     print_header
-    echo "Variant Information: $config_desc"
+    echo "Current configuration: $config_desc"
     echo
-    
-    if [[ -d "$variant_dir" ]]; then
-        echo "Files in $config_name variant:"
-        ls -la "$variant_dir"
-        echo
-        
-        if [[ -f "$variant_dir/devcontainer.json" ]]; then
-            local name=$(grep '"name"' "$variant_dir/devcontainer.json" | head -1 | sed 's/.*"name": *"\([^"]*\)".*/\1/')
-            echo "Configuration name: $name"
-        fi
-        
-        if [[ -f "$variant_dir/Dockerfile" ]]; then
-            local base_image=$(head -1 "$variant_dir/Dockerfile" | sed 's/FROM //')
-            echo "Base image: $base_image"
-        fi
-    else
-        print_error "Variant directory not found: $variant_dir"
-    fi
-    echo
+    echo "Use '$0 list' to see available configurations"
+    echo "Use '$0 <config_name>' to switch configurations"
 }
 
 # Main script logic
-case "${1:-}" in
-    "list"|"ls")
-        show_configs
-        ;;
-    "current"|"status")
-        show_current
-        ;;
-    "restore"|"backup")
-        restore_backup
-        ;;
-    "info")
-        if [[ -n "$2" ]]; then
-            show_variant_info "$2"
-        else
-            print_error "Please specify a variant name for info"
-            echo "Usage: $0 info <variant_name>"
-        fi
-        ;;
-    "help"|"-h"|"--help"|"")
-        print_header
-        echo "Usage: $0 <command> [configuration]"
-        echo
-        echo "Commands:"
-        echo "  list, ls                    Show available configurations"
-        echo "  current, status             Show current configuration"
-        echo "  <config_name>               Switch to specified configuration"
-        echo "  info <config_name>          Show detailed info about a variant"
-        echo "  restore, backup             Restore from backup"
-        echo "  help, -h, --help            Show this help message"
-        echo
-        echo "Examples:"
-        echo "  $0 list                     # Show all configurations"
-        echo "  $0 alpine                   # Switch to Alpine Linux"
-        echo "  $0 ubuntu                   # Switch to Ubuntu"
-        echo "  $0 info alpine              # Show Alpine variant details"
-        echo "  $0 restore                  # Restore from backup"
-        echo
-        ;;
-    *)
-        switch_config "$1"
-        ;;
-esac 
+main() {
+    case "${1:-}" in
+        "help"|"-h"|"--help")
+            show_help
+            ;;
+        "list"|"-l"|"--list")
+            list_configs
+            ;;
+        "current"|"-c"|"--current")
+            show_current_config
+            ;;
+        "linux"|"windows")
+            local config_desc=$(get_config_desc "$1")
+            switch_config "$1" "$config_desc"
+            ;;
+        "")
+            show_current_config
+            ;;
+        *)
+            print_error "Unknown option: $1"
+            echo "Use '$0 help' for usage information"
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@" 

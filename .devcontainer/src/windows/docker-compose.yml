@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  claude-code-windows:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TZ: ${TZ:-America/New_York}
+        NODE_VERSION: ${NODE_VERSION:-20}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.11}
+        WINDOWS_VERSION: ${WINDOWS_VERSION:-latest}
+    container_name: claude-code-windows-dev
+    hostname: claude-code-windows
+    user: developer
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace:cached
+      - claude-code-bashhistory:/commandhistory
+      - claude-code-config:/home/developer/.claude
+      - claude-code-cache:/home/developer/.cache
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - CLAUDE_CONFIG_DIR=/home/developer/.claude
+      - POWERLEVEL9K_DISABLE_GITSTATUS=true
+      - DEVCONTAINER=true
+      - TZ=America/New_York
+      - PYTHONPATH=/workspace:/usr/local/lib/python3.11/site-packages
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=
+      - WINDOWS_HOST=true
+      - WSL2_INTEGRATION=true
+    ports:
+      - "8888:8888"   # Jupyter Notebook
+      - "8889:8889"   # JupyterLab
+      - "3000:3000"   # Development server
+      - "8080:8080"   # Alternative dev server
+      - "5173:5173"   # Vite dev server
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    shm_size: 2g
+    mem_limit: 4g
+    cpus: 2.0
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    command: /bin/zsh
+
+volumes:
+  claude-code-bashhistory:
+    driver: local
+  claude-code-config:
+    driver: local
+  claude-code-cache:
+    driver: local 

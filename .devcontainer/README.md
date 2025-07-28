@@ -1,19 +1,26 @@
 # Claude Code Development Environment
 
-This directory provides a Docker-based development environment for Claude Code development. It runs using **Docker Compose without Visual Studio Code's Remote Containers functionality**.
+This directory provides a Docker-based development environment for Claude Code development. **This setup supports both Docker Compose and Visual Studio Code's Remote Containers functionality** for maximum flexibility.
 
 ## Directory Structure
 
 ```
 .devcontainer/
-├── run.sh                    # Main execution script
-├── README.md                 # This file
-└── src/                      # Source configurations
-    ├── linux/                # Linux development environment
+├── devcontainer.json          # Basic configuration for VS Code Remote Containers
+├── Dockerfile                 # Basic Dockerfile for VS Code Remote Containers
+├── run.sh                     # Main execution script for Docker Compose
+├── connect.sh                 # Editor connection script (no VS Code required)
+└── README.md                  # This file
+
+.devcontainer-templates/
+└── src/                       # Source configurations
+    ├── linux/                 # Linux development environment
+    │   ├── devcontainer.json  # Linux-specific VS Code configuration
     │   ├── Dockerfile
     │   ├── docker-compose.yml
     │   └── run.sh
-    └── windows/              # Windows WSL2 development environment
+    └── windows/               # Windows WSL2 development environment
+        ├── devcontainer.json  # Windows-specific VS Code configuration
         ├── Dockerfile
         ├── docker-compose.yml
         └── run.sh
@@ -35,7 +42,8 @@ This directory provides a Docker-based development environment for Claude Code d
 
 ## Usage
 
-### Quick Start
+### Method 1: Docker Compose (Recommended)
+**No VS Code extension required**
 
 1. **Start environment:**
    ```bash
@@ -43,13 +51,32 @@ This directory provides a Docker-based development environment for Claude Code d
    .devcontainer/run.sh windows start  # Start Windows WSL2 environment
    ```
 
-2. **Access shell:**
+2. **Connect with your preferred editor:**
    ```bash
-   .devcontainer/run.sh linux shell    # Access Linux container shell
-   .devcontainer/run.sh windows shell  # Access Windows container shell
+   .devcontainer/connect.sh linux vim      # Connect with Vim
+   .devcontainer/connect.sh windows code   # Connect with VS Code
+   .devcontainer/connect.sh linux shell    # Open shell only
    ```
 
-### Complete Commands
+### Method 2: VS Code Remote Containers
+**Requires VS Code Remote Containers extension**
+
+1. **Copy configuration to .devcontainer:**
+   ```bash
+   # For Linux environment
+   cp .devcontainer-templates/src/linux/devcontainer.json .devcontainer/
+   cp .devcontainer-templates/src/linux/Dockerfile .devcontainer/
+   
+   # For Windows environment
+   cp .devcontainer-templates/src/windows/devcontainer.json .devcontainer/
+   cp .devcontainer-templates/src/windows/Dockerfile .devcontainer/
+   ```
+
+2. **Open in VS Code and rebuild container:**
+   - Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+   - Run "Dev Containers: Rebuild Container"
+
+### Complete Commands (Docker Compose)
 
 ```bash
 # Show help
@@ -85,6 +112,22 @@ This directory provides a Docker-based development environment for Claude Code d
 # Clean environment (remove containers and volumes)
 .devcontainer/run.sh linux clean
 .devcontainer/run.sh windows clean
+```
+
+### Editor Connection Commands
+
+```bash
+# Show connection help
+.devcontainer/connect.sh help
+
+# Connect with different editors
+.devcontainer/connect.sh linux vim      # Vim
+.devcontainer/connect.sh linux nvim     # Neovim
+.devcontainer/connect.sh linux code     # VS Code
+.devcontainer/connect.sh linux sublime  # Sublime Text
+.devcontainer/connect.sh linux webstorm # WebStorm
+.devcontainer/connect.sh linux pycharm  # PyCharm
+.devcontainer/connect.sh linux shell    # Shell only
 ```
 
 ## Features
@@ -162,8 +205,8 @@ docker system prune -a
 If execution scripts don't work:
 
 1. Check execution permissions: `chmod +x .devcontainer/run.sh`
-2. Verify src directory structure
-3. Check file permissions in src directories
+2. Verify .devcontainer-templates directory structure
+3. Check file permissions in .devcontainer-templates directories
 
 ### Understanding Configuration Differences
 
@@ -185,29 +228,24 @@ To understand differences between environments:
 
 When adding new environments:
 
-1. Create new directory in `.devcontainer/src/<name>/`
-2. Add `Dockerfile`, `docker-compose.yml`, `run.sh`
+1. Create new directory in `.devcontainer-templates/src/<name>/`
+2. Add `devcontainer.json`, `Dockerfile`, `docker-compose.yml`, `run.sh`
 3. Test environment thoroughly
 4. Update this README with new options
 
 ## Support
 
-For devcontainer configuration issues:
+For development environment issues:
+- Check [Docker documentation](https://docs.docker.com/)
 - Check [Dev Containers documentation](https://containers.dev/)
 - Ensure Docker Desktop is running and properly configured
 - Use `run.sh help` for script usage information
 
-## Differences from Remote Containers
+## Benefits of This Approach
 
-### Using Remote Containers
-- VS Code extension required
-- `.devcontainer/devcontainer.json` file needed
-- Container management within VS Code
-- Automatic extension installation and configuration
-
-### Current Approach (Docker Compose)
-- No VS Code extension required
-- Uses standard Docker Compose
-- Container management via command line
-- Manual extension installation (if needed)
-- More control and flexibility 
+- **Flexibility** - Choose between Docker Compose and VS Code Remote Containers
+- **Editor independence** - Use any editor you prefer with Docker Compose
+- **Faster startup** - Docker Compose has less overhead than VS Code extensions
+- **Better automation** - Easy to script and integrate with CI/CD
+- **More control** - Direct Docker management when needed
+- **Cross-platform** - Consistent experience everywhere 

@@ -16,7 +16,7 @@ set -e
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VARIANT_DIR="$SCRIPT_DIR/variants"
+SRC_DIR="$SCRIPT_DIR/src"
 
 # Available configurations
 CONFIGS_linux="Linux Development Environment (Ubuntu 22.04)"
@@ -67,22 +67,22 @@ get_config_desc() {
 test_config() {
     local config_name="$1"
     local config_desc="$2"
-    local variant_dir="$VARIANT_DIR/$config_name"
+    local src_dir="$SRC_DIR/$config_name"
     
     echo
     echo "Testing: $config_name - $config_desc"
     echo "=================================================="
     
-    # Test 1: Check if variant directory exists
-    if [[ -d "$variant_dir" ]]; then
-        print_info "✓ Variant directory exists: $variant_dir"
+    # Test 1: Check if src directory exists
+    if [[ -d "$src_dir" ]]; then
+        print_info "✓ Configuration directory exists: $src_dir"
     else
-        print_error "✗ Variant directory not found: $variant_dir"
+        print_error "✗ Configuration directory not found: $src_dir"
         return 1
     fi
     
     # Test 2: Check if devcontainer.json exists
-    if [[ -f "$variant_dir/devcontainer.json" ]]; then
+    if [[ -f "$src_dir/devcontainer.json" ]]; then
         print_info "✓ devcontainer.json exists"
     else
         print_error "✗ devcontainer.json not found"
@@ -90,84 +90,70 @@ test_config() {
     fi
     
     # Test 3: Validate JSON syntax
-    if python3 -m json.tool "$variant_dir/devcontainer.json" > /dev/null 2>&1; then
+    if python3 -m json.tool "$src_dir/devcontainer.json" > /dev/null 2>&1; then
         print_info "✓ devcontainer.json has valid JSON syntax"
     else
         print_error "✗ Invalid JSON in devcontainer.json"
         return 1
     fi
     
-    # Test 4: Check if Dockerfile exists (for Linux)
-    if [[ "$config_name" == "linux" ]]; then
-        if [[ -f "$variant_dir/Dockerfile" ]]; then
-            print_info "✓ Dockerfile exists"
-            
-            # Try to determine base image
-            local base_image=$(head -1 "$variant_dir/Dockerfile" | sed 's/FROM //' 2>/dev/null || echo "")
-            if [[ -n "$base_image" ]]; then
-                print_info "✓ Base image: $base_image"
-            else
-                print_warning "Could not determine base image"
-            fi
+    # Test 4: Check if Dockerfile exists
+    if [[ -f "$src_dir/Dockerfile" ]]; then
+        print_info "✓ Dockerfile exists"
+        
+        # Try to determine base image
+        local base_image=$(head -1 "$src_dir/Dockerfile" | sed 's/FROM //' 2>/dev/null || echo "")
+        if [[ -n "$base_image" ]]; then
+            print_info "✓ Base image: $base_image"
         else
-            print_error "✗ Dockerfile not found for Linux configuration"
-            return 1
+            print_warning "Could not determine base image"
         fi
+    else
+        print_error "✗ Dockerfile not found"
+        return 1
     fi
     
-    # Test 5: Check if setup script exists (for Windows)
-    if [[ "$config_name" == "windows" ]]; then
-        if [[ -f "$variant_dir/setup-windows.sh" ]]; then
-            print_info "✓ setup-windows.sh exists"
-            
-            # Check if script is executable
-            if [[ -x "$variant_dir/setup-windows.sh" ]]; then
-                print_info "✓ setup-windows.sh is executable"
-            else
-                print_warning "setup-windows.sh is not executable"
-            fi
-        else
-            print_error "✗ setup-windows.sh not found for Windows configuration"
-            return 1
-        fi
-    fi
-    
-    # Test 6: Check timezone configuration
-    if grep -q "America/New_York" "$variant_dir/devcontainer.json" 2>/dev/null; then
+    # Test 5: Check timezone configuration
+    if grep -q "America/New_York" "$src_dir/devcontainer.json" 2>/dev/null; then
         print_info "✓ Timezone configured: America/New_York"
     else
         print_warning "Timezone not found or not set to America/New_York"
     fi
     
-    # Test 7: Check environment variables
-    if grep -q "NODE_OPTIONS" "$variant_dir/devcontainer.json" 2>/dev/null; then
+    # Test 6: Check environment variables
+    if grep -q "NODE_OPTIONS" "$src_dir/devcontainer.json" 2>/dev/null; then
         print_info "✓ NODE_OPTIONS environment variable configured"
     else
         print_warning "NODE_OPTIONS environment variable not found"
     fi
     
-    if grep -q "CLAUDE_CONFIG_DIR" "$variant_dir/devcontainer.json" 2>/dev/null; then
+    if grep -q "CLAUDE_CONFIG_DIR" "$src_dir/devcontainer.json" 2>/dev/null; then
         print_info "✓ CLAUDE_CONFIG_DIR environment variable configured"
     else
         print_warning "CLAUDE_CONFIG_DIR environment variable not found"
     fi
     
-    # Test 8: Check VS Code extensions
-    if grep -q "anthropic.claude-code" "$variant_dir/devcontainer.json" 2>/dev/null; then
+    # Test 7: Check VS Code extensions
+    if grep -q "anthropic.claude-code" "$src_dir/devcontainer.json" 2>/dev/null; then
         print_info "✓ Required VS Code extensions configured"
     else
         print_warning "Required VS Code extensions not found"
     fi
     
+    # Test 8: Check user configuration
+    if grep -q '"remoteUser": "developer"' "$src_dir/devcontainer.json" 2>/dev/null; then
+        print_info "✓ Developer user configured"
+    else
+        print_warning "Developer user not configured"
+    fi
+    
     # Test 9: Test Docker build (if Docker is available)
     if command -v docker &> /dev/null; then
-        if [[ "$config_name" == "linux" ]]; then
-            print_info "Testing Docker build..."
-            if docker build --dry-run -f "$variant_dir/Dockerfile" "$variant_dir" > /dev/null 2>&1; then
-                print_info "✓ Docker build test passed"
-            else
-                print_warning "Docker build test failed"
-            fi
+        print_info "Testing Docker build..."
+        if docker build --dry-run -f "$src_dir/Dockerfile" "$src_dir" > /dev/null 2>&1; then
+            print_info "✓ Docker build test passed"
+        else
+            print_warning "Docker build test failed"
         fi
     else
         print_warning "Docker not available - skipping build test"

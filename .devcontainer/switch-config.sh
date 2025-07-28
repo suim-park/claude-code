@@ -18,7 +18,7 @@
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VARIANT_DIR="$SCRIPT_DIR/variants"
+SRC_DIR="$SCRIPT_DIR/src"
 
 # Available configurations
 CONFIGS_linux="Linux Development Environment (Ubuntu 22.04)"
@@ -102,21 +102,21 @@ get_config_desc() {
 switch_config() {
     local config_name="$1"
     local config_desc="$2"
-    local variant_dir="$VARIANT_DIR/$config_name"
+    local src_dir="$SRC_DIR/$config_name"
     
     print_header
     echo "Switching to: $config_desc"
     echo "=================================================="
     
-    # Check if variant directory exists
-    if [[ ! -d "$variant_dir" ]]; then
-        print_error "Configuration directory not found: $variant_dir"
+    # Check if src directory exists
+    if [[ ! -d "$src_dir" ]]; then
+        print_error "Configuration directory not found: $src_dir"
         exit 1
     fi
     
     # Check if devcontainer.json exists
-    if [[ ! -f "$variant_dir/devcontainer.json" ]]; then
-        print_error "devcontainer.json not found in $variant_dir"
+    if [[ ! -f "$src_dir/devcontainer.json" ]]; then
+        print_error "devcontainer.json not found in $src_dir"
         exit 1
     fi
     
@@ -128,25 +128,13 @@ switch_config() {
     fi
     
     # Copy configuration files
-    cp "$variant_dir/devcontainer.json" "$SCRIPT_DIR/devcontainer.json"
+    cp "$src_dir/devcontainer.json" "$SCRIPT_DIR/devcontainer.json"
     print_info "Copied devcontainer.json"
     
     # Copy Dockerfile if it exists
-    if [[ -f "$variant_dir/Dockerfile" ]]; then
-        cp "$variant_dir/Dockerfile" "$SCRIPT_DIR/Dockerfile"
+    if [[ -f "$src_dir/Dockerfile" ]]; then
+        cp "$src_dir/Dockerfile" "$SCRIPT_DIR/Dockerfile"
         print_info "Copied Dockerfile"
-    fi
-    
-    # Special handling for Windows configuration
-    if [[ "$config_name" == "windows" ]]; then
-        local setup_script="$variant_dir/setup-windows.sh"
-        if [[ -f "$setup_script" ]]; then
-            cp "$setup_script" "$SCRIPT_DIR/setup-windows.sh"
-            chmod +x "$SCRIPT_DIR/setup-windows.sh"
-            print_info "Copied and made setup-windows.sh executable"
-        else
-            print_warning "setup-windows.sh not found for Windows configuration"
-        fi
     fi
     
     print_info "Successfully switched to $config_desc configuration!"
@@ -160,9 +148,6 @@ switch_config() {
     echo "  - devcontainer.json: Main configuration"
     if [[ -f "$SCRIPT_DIR/Dockerfile" ]]; then
         echo "  - Dockerfile: Container build instructions"
-    fi
-    if [[ -f "$SCRIPT_DIR/setup-windows.sh" ]]; then
-        echo "  - setup-windows.sh: Windows-specific setup script"
     fi
 }
 

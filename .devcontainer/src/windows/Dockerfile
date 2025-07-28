@@ -1,16 +1,16 @@
 # =============================================================================
-# CLAUDE CODE DEVELOPMENT ENVIRONMENT - LINUX
+# CLAUDE CODE DEVELOPMENT ENVIRONMENT - WINDOWS
 # =============================================================================
-# Custom Dockerfile for Claude Code development on Linux
+# Custom Dockerfile for Claude Code development on Windows WSL2
 # 
 # FEATURES:
-# - Ubuntu 22.04 LTS base with latest updates
+# - Ubuntu 22.04 LTS base optimized for WSL2
 # - Node.js 20 runtime optimized for Claude Code
 # - Python 3.11 with scientific computing stack
-# - Comprehensive development toolchain
+# - Windows WSL2 integration and optimizations
 # - Enhanced shell environment with zsh and powerline10k
 # - Jupyter notebook and lab support
-# - Security and networking tools
+# - Cross-platform development tools
 # - Custom developer user with sudo access
 # =============================================================================
 
@@ -20,14 +20,14 @@ FROM ubuntu:22.04
 ARG TZ
 ARG NODE_VERSION=20
 ARG PYTHON_VERSION=3.11
-ARG UBUNTU_VERSION=22.04
+ARG WINDOWS_VERSION=latest
 
 # Set environment variables
 ENV TZ="$TZ"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_VERSION=$NODE_VERSION
 ENV PYTHON_VERSION=$PYTHON_VERSION
-ENV UBUNTU_VERSION=$UBUNTU_VERSION
+ENV WINDOWS_VERSION=$WINDOWS_VERSION
 
 # Update system and install core packages
 RUN apt update && apt upgrade -y && apt install -y \
@@ -55,6 +55,8 @@ RUN apt update && apt upgrade -y && apt install -y \
     gstreamer1.0-qt5 gstreamer1.0-pulseaudio \
     libgirepository1.0-dev libcairo2-dev libpango1.0-dev libatk1.0-dev \
     libgdk-pixbuf2.0-dev libgtk-3-dev \
+    # Windows-specific tools
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js
@@ -122,14 +124,23 @@ RUN pip3 install --no-cache-dir \
     psutil \
     # Code quality
     black pylint mypy \
-    && python3 -m ipykernel install --user --name=claude-code-linux --display-name="Claude Code Linux"
+    && python3 -m ipykernel install --user --name=claude-code-windows --display-name="Claude Code Windows"
 
-# Create environment initialization script
-RUN tee /usr/local/bin/init-environment.sh > /dev/null << 'EOF'
+# Create Windows-specific environment initialization script
+RUN tee /usr/local/bin/init-windows-environment.sh > /dev/null << 'EOF'
 #!/bin/bash
-# Environment initialization script for Claude Code development
+# Windows environment initialization script for Claude Code development
 
-echo "🚀 Initializing Claude Code development environment..."
+echo "🚀 Initializing Claude Code Windows development environment..."
+
+# Check if running in WSL2
+if [ -f /proc/version ] && grep -q Microsoft /proc/version; then
+    echo "✅ WSL2 environment detected"
+    export WSL2_ENVIRONMENT=true
+else
+    echo "⚠️  WSL2 environment not detected"
+    export WSL2_ENVIRONMENT=false
+fi
 
 # Set up bash history
 mkdir -p /commandhistory
@@ -139,6 +150,22 @@ chown -R developer:developer /commandhistory
 # Set up Claude configuration
 mkdir -p /home/developer/.claude
 chown -R developer:developer /home/developer/.claude
+
+# Windows-specific optimizations
+if [ "$WSL2_ENVIRONMENT" = "true" ]; then
+    echo "🔧 Applying Windows WSL2 optimizations..."
+    
+    # Set up Windows integration
+    export DISPLAY=:0
+    
+    # Optimize for Windows file system
+    export MSYS=winsymlinks:nativestrict
+    
+    # Set up Windows-specific paths
+    if [ -d /mnt/c ]; then
+        echo "📁 Windows C: drive detected at /mnt/c"
+    fi
+fi
 
 # Initialize firewall (if needed)
 if command -v iptables &> /dev/null; then
@@ -153,12 +180,17 @@ export PYTHONPATH=/workspace:/usr/local/lib/python3.11/site-packages
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
 
-echo "✅ Environment initialization complete!"
-echo "🎯 Ready for Claude Code development!"
+# Windows-specific environment variables
+export WINDOWS_HOST=true
+export WSL2_INTEGRATION=true
+
+echo "✅ Windows environment initialization complete!"
+echo "🎯 Ready for Claude Code development on Windows!"
+echo "🪟 WSL2 integration: $WSL2_ENVIRONMENT"
 EOF
 
-RUN chmod +x /usr/local/bin/init-environment.sh && \
-    chown developer:developer /usr/local/bin/init-environment.sh
+RUN chmod +x /usr/local/bin/init-windows-environment.sh && \
+    chown developer:developer /usr/local/bin/init-windows-environment.sh
 
 # Switch back to developer user
 USER developer

@@ -1,5 +1,5 @@
 {
-  "name": "Claude Code - Linux Development",
+  "name": "Claude Code - Windows Development",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".",
@@ -7,7 +7,7 @@
       "TZ": "${localEnv:TZ:America/New_York}",
       "NODE_VERSION": "${localEnv:NODE_VERSION:20}",
       "PYTHON_VERSION": "${localEnv:PYTHON_VERSION:3.11}",
-      "UBUNTU_VERSION": "${localEnv:UBUNTU_VERSION:22.04}"
+      "WINDOWS_VERSION": "${localEnv:WINDOWS_VERSION:latest}"
     }
   },
   "runArgs": [
@@ -38,7 +38,8 @@
         "ms-vscode.cpptools",
         "ms-vscode.cmake-tools",
         "ms-vscode.hexeditor",
-        "ms-vscode.remote-containers"
+        "ms-vscode.remote-containers",
+        "ms-vscode.remote-wsl"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -105,7 +106,9 @@
           "**/.git/subtree-cache/**": true,
           "**/tmp/**": true,
           "**/bower_components/**": true
-        }
+        },
+        "remote.WSL.enabled": true,
+        "remote.WSL.debug": false
       }
     }
   },
@@ -129,7 +132,7 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  "postCreateCommand": "sudo /usr/local/bin/init-environment.sh",
+  "postCreateCommand": "sudo /usr/local/bin/init-windows-environment.sh",
   "forwardPorts": [
     8888,
     8889,

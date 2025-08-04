@@ -1,292 +1,248 @@
-# VS Code에서 Devcontainer 사용 가이드
+# VS Code Devcontainer Usage Guide
 
-## 1. 사전 준비
+## 1. Prerequisites
 
-### VS Code 확장 설치
-1. VS Code 열기
-2. Extensions 탭 (Cmd+Shift+X) 열기
-3. 다음 확장들 설치:
+### Install VS Code Extensions
+1. Open VS Code
+2. Open Extensions tab (Cmd+Shift+X)
+3. Install the following extensions:
    - **Dev Containers** (ms-vscode-remote.remote-containers)
    - **Docker** (ms-azuretools.vscode-docker)
    - **Claude Code** (anthropic.claude-code)
 
-### Docker Desktop 설치 및 시작
+### Install and Start Docker Desktop
 ```bash
-# Docker Desktop 설치 (이미 완료됨)
+# Install Docker Desktop (already completed)
 brew install --cask docker
 
-# Docker Desktop 시작
-# Applications 폴더에서 Docker.app 실행
-# 또는 Spotlight (Cmd+Space)에서 "Docker" 검색하여 실행
+# Start Docker Desktop
+# Run Docker.app from Applications folder
+# Or search for "Docker" in Spotlight (Cmd+Space) and run it
 ```
 
-## 2. Devcontainer 환경 시작
+## 2. Starting Devcontainer Environment
 
-### 방법 1: VS Code에서 직접 시작
-1. VS Code에서 프로젝트 폴더 열기
-2. Command Palette (Cmd+Shift+P) 열기
-3. "Dev Containers: Rebuild Container" 입력 및 실행
-4. 컨테이너 빌드 완료까지 대기 (5-10분 소요)
+### Method 1: Start directly from VS Code (Recommended)
+1. Open project folder in VS Code
+2. Open Command Palette (Cmd+Shift+P)
+3. Type "Dev Containers: Reopen in Container" and execute
+4. Wait for container build to complete (takes 5-10 minutes)
 
-### 방법 2: Docker Compose 사용
+### Method 2: Using Docker Compose (if available)
 ```bash
-# 프로젝트 루트에서 실행
-.devcontainer/run.sh linux start
+# If docker-compose.yml exists in .devcontainer/
+docker-compose up -d
 ```
 
-## 3. M3 최적화 설정
+## 3. M3 Optimization Settings
 
-### Docker Desktop 설정
+### Docker Desktop Settings
 1. Docker Desktop > Settings > Resources
-2. Memory: 8GB 이상 할당
-3. CPUs: 4개 이상 할당
-4. Swap: 2GB 이상 설정
-5. Disk image size: 64GB 이상
+2. Memory: Allocate 8GB or more
+3. CPUs: Allocate 2 or more (matches current devcontainer.json)
+4. Swap: Set 2GB or more
+5. Disk image size: 64GB or more
 
-### VS Code 설정
+### VS Code Settings
+The current `.devcontainer/devcontainer.json` already includes optimized settings:
 ```json
-// .vscode/settings.json
 {
-  "remote.containers.defaultExtensions": [
-    "anthropic.claude-code",
-    "ms-vscode.vscode-typescript-next",
-    "ms-python.python",
-    "ms-toolsai.jupyter",
-    "eamodio.gitlens",
-    "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint"
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW",
+    "--shm-size=2g",
+    "--memory=8g",
+    "--cpus=2"
   ],
-  "remote.containers.resources": {
-    "memory": "8g",
-    "cpus": "4"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.flake8"
+      ]
+    }
   }
 }
 ```
 
-## 4. 컨테이너 내부에서 M3 설치
+## 4. Container Features (Pre-installed)
 
-### 컨테이너 시작 후 실행할 명령어들
+The current `.devcontainer/Dockerfile` includes:
 
+### Pre-installed Tools
+- ✅ **Ubuntu 22.04 LTS** base
+- ✅ **Node.js 20** (optimized for Claude Code)
+- ✅ **Python 3.11** with scientific computing stack
+- ✅ **UV** (fast Python package manager)
+- ✅ **Pixi** (conda-like package manager)
+- ✅ **Claude Code** (globally installed)
+- ✅ **Jupyter** notebook and lab support
+- ✅ **Zsh** with enhanced shell environment
+- ✅ **Development tools** (git, vim, nano, etc.)
+
+### Pre-installed Python Packages
+- Scientific computing: numpy, pandas, matplotlib, seaborn, scipy, scikit-learn
+- Deep learning: torch, torchvision, transformers, datasets
+- Web frameworks: flask, fastapi, uvicorn
+- Data processing: sqlalchemy, redis, pymongo
+- Cloud tools: boto3, kubernetes, docker
+- Development tools: black, pylint, mypy, pytest
+
+## 5. Using Claude Code
+
+### Basic Usage
 ```bash
-# 1. 시스템 업데이트
-sudo apt update && sudo apt upgrade -y
+# Run Claude Code
+claude-code
 
-# 2. M3 최적화된 패키지들 설치
-sudo apt install -y \
-  build-essential \
-  cmake \
-  pkg-config \
-  git \
-  curl \
-  wget \
-  fzf \
-  ripgrep \
-  bat \
-  exa \
-  fd \
-  jq \
-  yq \
-  htop \
-  tmux \
-  neovim \
-  zsh
+# Or use the quick start script
+./quick-start.sh
 
-# 3. Node.js 20 설치 (M3 최적화)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# 4. Python 3.11 및 개발 도구 설치
-sudo apt install -y \
-  python3.11 \
-  python3.11-dev \
-  python3.11-venv \
-  python3-pip \
-  python3-setuptools \
-  python3-wheel
-
-# 5. M3 최적화된 Python 패키지들 설치
-pip3 install --upgrade pip
-pip3 install \
-  numpy \
-  pandas \
-  matplotlib \
-  seaborn \
-  scipy \
-  scikit-learn \
-  jupyter \
-  jupyterlab \
-  ipykernel \
-  black \
-  pylint \
-  mypy \
-  pytest \
-  requests \
-  beautifulsoup4 \
-  flask \
-  fastapi \
-  uvicorn \
-  sqlalchemy \
-  redis \
-  pymongo \
-  docker \
-  kubernetes \
-  boto3 \
-  opencv-python \
-  pillow \
-  torch \
-  torchvision \
-  transformers \
-  datasets \
-  streamlit \
-  gradio
-
-# 6. Node.js 패키지들 설치
-npm install -g \
-  @anthropic-ai/claude-code \
-  typescript \
-  ts-node \
-  nodemon \
-  eslint \
-  prettier \
-  yarn \
-  pnpm
-
-# 7. Claude Code 초기화
-claude init
+# Check installation
+which claude-code
+claude-code --version
 ```
 
-## 5. Claude Code 사용하기
-
-### 기본 사용법
+### Available Commands
 ```bash
-# Claude Code 실행
-claude
+# Start Claude Code
+claude-code
 
-# 프로젝트 분석
-claude analyze
+# Start with specific workspace
+claude-code /workspace
 
-# 코드 리뷰
-claude review
-
-# 특정 파일 설명
-claude explain src/main.py
-
-# 테스트 생성
-claude test src/calculator.py
-
-# 버그 리포트
-claude /bug
+# Check help
+claude-code --help
 ```
 
-### M3 최적화 명령어
+## 6. Development Workflow
+
+### 1. Starting a New Project
 ```bash
-# M3 성능 모니터링
-htop
-lscpu
-free -h
+# The container is ready to use immediately
+# All tools are pre-installed and configured
 
-# M3 최적화된 빌드
-arch -arm64 python3 setup.py build
-arch -arm64 npm run build
-
-# M3 특화 환경변수 설정
-export ARCHFLAGS="-arch arm64"
-export LDFLAGS="-L/opt/homebrew/lib"
-export CPPFLAGS="-I/opt/homebrew/include"
+# Use the quick start script
+./quick-start.sh
 ```
 
-## 6. 개발 워크플로우
-
-### 1. 새 프로젝트 시작
+### 2. Code Development
 ```bash
-# 프로젝트 디렉토리 생성
-mkdir my-project
-cd my-project
+# Python development
+python3 --version
+pip3 list
 
-# Claude Code로 프로젝트 초기화
-claude init
+# Node.js development
+node --version
+npm --version
 
-# Claude Code와 함께 프로젝트 설정
-claude "Create a new Python FastAPI project with M3 optimizations"
+# Package managers
+uv --version
+pixi --version
 ```
 
-### 2. 코드 개발
+### 3. Jupyter Notebooks
 ```bash
-# Claude Code와 함께 개발
-claude "Create a REST API endpoint for user management"
-claude "Add authentication middleware"
-claude "Write unit tests for the API"
-claude "Optimize this code for M3 performance"
+# Start Jupyter Lab
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+
+# Or use the pre-configured setup
+# Jupyter is already configured in the container
 ```
 
-### 3. 디버깅 및 최적화
+## 7. Troubleshooting
+
+### Common Issues
+
+#### 1. Permission Issues
 ```bash
-# 코드 분석
-claude analyze
-
-# 성능 최적화
-claude "Review and optimize this code for M3"
-
-# 보안 검토
-claude "Review this code for security vulnerabilities"
-```
-
-## 7. 문제 해결
-
-### 일반적인 문제들
-
-#### 1. 권한 문제
-```bash
-# 컨테이너 내부에서 권한 수정
+# Fix permissions inside container
 sudo chown -R developer:developer /workspace
 sudo chown -R developer:developer /home/developer
 ```
 
-#### 2. 메모리 부족
+#### 2. Memory Issues
 ```bash
-# Node.js 메모리 증가
-export NODE_OPTIONS="--max-old-space-size=8192"
+# Increase Node.js memory (already set in devcontainer.json)
+export NODE_OPTIONS="--max-old-space-size=4096"
 
-# Python 메모리 최적화
+# Python memory optimization
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
 ```
 
-#### 3. 네트워크 문제
+#### 3. Network Issues
 ```bash
-# 방화벽 재설정
+# Reset firewall (pre-configured script)
 sudo /usr/local/bin/init-firewall.sh
 ```
 
-#### 4. M3 성능 최적화
+#### 4. Container Issues
 ```bash
-# M3 특화 환경변수
-export ARCHFLAGS="-arch arm64"
-export LDFLAGS="-L/opt/homebrew/lib"
-export CPPFLAGS="-I/opt/homebrew/include"
+# Rebuild container
+# In VS Code: Cmd+Shift+P > "Dev Containers: Rebuild Container"
 
-# Python 패키지 재설치 (M3 최적화)
-pip3 install --force-reinstall --no-cache-dir numpy pandas
+# Or clean up Docker
+docker system prune -a
 ```
 
-## 8. 유용한 팁
+## 8. Useful Tips
 
-### VS Code 단축키
+### VS Code Shortcuts
 - `Cmd+Shift+P`: Command Palette
 - `Cmd+Shift+E`: Explorer
 - `Cmd+Shift+X`: Extensions
 - `Cmd+J`: Terminal
 - `Cmd+Shift+F`: Search
 
-### Devcontainer 명령어
+### Devcontainer Commands
+- `Cmd+Shift+P` > "Dev Containers: Reopen in Container"
 - `Cmd+Shift+P` > "Dev Containers: Rebuild Container"
-- `Cmd+Shift+P` > "Dev Containers: Open Folder in Container"
 - `Cmd+Shift+P` > "Dev Containers: Show Container Log"
 
-### Claude Code 명령어
-- `claude help`: 도움말 보기
-- `claude status`: 상태 확인
-- `claude config`: 설정 확인
-- `claude /bug`: 버그 리포트
+### Available Scripts
+- `./quick-start.sh`: Interactive startup script
+- `sudo /usr/local/bin/init-firewall.sh`: Firewall configuration
+- `/usr/local/bin/setup-dev-environment.sh`: Environment setup (runs automatically)
 
-이제 VS Code에서 devcontainer 환경을 사용하여 M3의 성능을 최대한 활용할 수 있습니다! 
+### Environment Variables (Pre-configured)
+```bash
+# Already set in devcontainer.json
+NODE_OPTIONS="--max-old-space-size=4096"
+CLAUDE_CONFIG_DIR="/home/developer/.claude"
+CUDA_HOME="/usr/local/cuda"
+PATH="/usr/local/cuda/bin:$PATH"
+```
+
+## 9. Project Structure
+
+```
+claude-code/
+├── .devcontainer/
+│   ├── devcontainer.json    # VS Code devcontainer configuration
+│   ├── Dockerfile          # Container image definition
+│   ├── init-firewall.sh    # Firewall setup script
+│   └── README.md           # Devcontainer documentation
+├── .devcontainer-templates/
+│   └── src/
+│       ├── linux/          # Linux template
+│       └── windows/        # Windows template
+├── quick-start.sh          # Interactive startup script
+├── CLAUDE_CODE_STARTUP_GUIDE.md
+├── UV_PIXI_DEVCONTAINER_GUIDE.md
+└── VSCODE_DEVCONTAINER_GUIDE.md
+```
+
+## 10. Quick Start
+
+1. **Start Devcontainer**: `Cmd+Shift+P` > "Dev Containers: Reopen in Container"
+2. **Run Quick Start**: `./quick-start.sh`
+3. **Start Claude Code**: `claude-code`
+4. **Begin Development**: All tools are ready to use!
+
+The devcontainer environment is fully configured and ready for Claude Code development with all necessary tools pre-installed! 

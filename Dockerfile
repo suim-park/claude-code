@@ -1,55 +1,28 @@
-# =============================================================================
-# CLAUDE CODE DEVELOPMENT ENVIRONMENT - WINDOWS (GPU ENABLED)
-# =============================================================================
-# Custom Dockerfile for Claude Code development on Windows with GPU support
-# 
-# FEATURES:
-# - Ubuntu 22.04 LTS base with latest updates
-# - Node.js 20 runtime optimized for Claude Code
-# - Python 3.11 with scientific computing stack
-# - GPU support via NVIDIA Container Runtime
-# - WSL2 optimized with dos2unix and Windows compatibility
-# - Comprehensive development toolchain
-# - Enhanced shell environment with zsh and powerline10k
-# - Jupyter notebook and lab support
-# - GPU monitoring and management tools
-# - Security and networking tools
-# - Custom developer user with sudo access
-# =============================================================================
+# FROM node:18
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
-FROM ubuntu:22.04
-
-# Build arguments
 ARG TZ
 ARG NODE_VERSION=20
 ARG PYTHON_VERSION=3.11
 ARG UBUNTU_VERSION=22.04
 
-# Set environment variables
 ENV TZ="$TZ"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_VERSION=$NODE_VERSION
 ENV PYTHON_VERSION=$PYTHON_VERSION
 ENV UBUNTU_VERSION=$UBUNTU_VERSION
-ENV WSL_DISTRO_NAME=claude-code-windows
 
-# Update system and install core packages
+# Install comprehensive development tools and scientific computing packages
 RUN apt update && apt upgrade -y && apt install -y \
-    # Essential system tools
     curl wget ca-certificates gnupg2 lsb-release software-properties-common \
-    # Build and development tools
     build-essential cmake pkg-config git vim nano less man-db \
-    # Network and security tools
     iptables ipset iproute2 dnsutils procps sudo fzf zsh unzip jq \
-    # Python and scientific computing dependencies
     python3 python3-pip python3-dev python3-venv python3-setuptools python3-wheel \
     libblas-dev liblapack-dev libatlas-base-dev gfortran \
     libhdf5-dev libhdf5-serial-dev \
-    # Graphics and multimedia libraries
     python3-pyqt5 libgtk-3-0 \
     libavcodec-dev libavformat-dev libswscale-dev libv4l-dev \
     libxvidcore-dev libx264-dev libjpeg-dev libpng-dev libtiff-dev \
-    # Additional development libraries
     libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libgtk2.0-dev \
     libtbb2 libtbb-dev libopenexr-dev \
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev \
@@ -59,10 +32,9 @@ RUN apt update && apt upgrade -y && apt install -y \
     gstreamer1.0-qt5 gstreamer1.0-pulseaudio \
     libgirepository1.0-dev libcairo2-dev libpango1.0-dev libatk1.0-dev \
     libgdk-pixbuf2.0-dev libgtk-3-dev \
-    # WSL2 compatibility tools
-    dos2unix \
-    # GPU monitoring tools (will work with NVIDIA Container Runtime)
     nvidia-utils-535 nvidia-settings \
+    gh \
+    aggregate \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js and Claude in one step to ensure npm is available
@@ -71,7 +43,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     npm install -g npm@latest && \
     npm install -g @anthropic-ai/claude-code
 
-# Create developer user
+# Create developer user with sudo privileges
 RUN useradd -m -s /bin/zsh -G sudo developer && \
     echo "developer ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/developer && \
     chmod 0440 /etc/sudoers.d/developer
@@ -121,27 +93,7 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     -x
 
-# Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code
-
-# Install git-delta
-USER root
-RUN ARCH=$(dpkg --print-architecture) && \
-    wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_${ARCH}.deb" && \
-    dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
-    rm "git-delta_0.18.2_${ARCH}.deb"
-
-# Set up zsh with powerline10k
-USER developer
-RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.2.0/zsh-in-docker.sh)" -- \
-    -p git \
-    -p fzf \
-    -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
-    -a "source /usr/share/doc/fzf/examples/completion.zsh" \
-    -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-    -x
-
-# Install Python packages with comprehensive AI/ML stack
+# Install Python packages with GPU support
 RUN pip3 install --user \
     # Core scientific computing
     numpy pandas matplotlib seaborn scipy scikit-learn \
@@ -185,10 +137,7 @@ RUN mkdir -p /home/developer/.jupyter && \
 USER root
 RUN cat > /usr/local/bin/setup-dev-environment.sh << 'EOF'
 #!/bin/bash
-echo "Setting up Claude Code development environment for Windows/WSL2..."
-
-# Check WSL environment
-echo "✅ WSL Environment: $WSL_DISTRO_NAME"
+echo "Setting up Claude Code development environment..."
 
 # Check GPU availability
 if command -v nvidia-smi &> /dev/null; then
@@ -215,7 +164,7 @@ else
 fi
 
 echo ""
-echo "🚀 Windows/WSL2 development environment ready!"
+echo "🚀 Development environment ready!"
 echo "Available tools:"
 echo "  - Node.js $(node --version)"
 echo "  - Python $(python3 --version)"
@@ -223,7 +172,6 @@ echo "  - Git $(git --version)"
 echo "  - Claude Code $(claude-code --version 2>/dev/null || echo 'installed')"
 echo "  - uv $(uv --version 2>/dev/null || echo 'installed')"
 echo "  - pixi $(pixi --version 2>/dev/null || echo 'installed')"
-echo "  - dos2unix: Windows file format conversion"
 echo ""
 echo "Package Managers:"
 echo "  - uv: Fast Python package manager (uv add <package>)"
@@ -246,54 +194,11 @@ echo "  - uv init: Create new Python project"
 echo "  - pixi init: Create new cross-platform project"
 echo "  - jupyter lab: Start JupyterLab"
 echo "  - claude-code: Start Claude Code"
-echo ""
-echo "WSL2 Features:"
-echo "  - Windows file system access"
-echo "  - Cross-platform development"
-echo "  - GPU acceleration support"
 EOF
 
 RUN chmod +x /usr/local/bin/setup-dev-environment.sh
 
-# Create firewall script
-RUN cat > /usr/local/bin/init-firewall.sh << 'EOF'
-#!/bin/bash
-# Initialize firewall rules for the development environment
-
-echo "Initializing firewall rules for Windows/WSL2..."
-
-# Allow all traffic for development (you can customize this for production)
-iptables -P INPUT ACCEPT
-iptables -P FORWARD ACCEPT
-iptables -P OUTPUT ACCEPT
-
-# Flush existing rules
-iptables -F
-iptables -X
-
-# Allow established connections
-iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-# Allow loopback
-iptables -A INPUT -i lo -j ACCEPT
-
-# Allow SSH (if needed)
-iptables -A INPUT -p tcp --dport 22 -j ACCEPT
-
-# Allow development ports
-iptables -A INPUT -p tcp --dport 3000 -j ACCEPT  # Node.js
-iptables -A INPUT -p tcp --dport 8000 -j ACCEPT  # FastAPI
-iptables -A INPUT -p tcp --dport 8080 -j ACCEPT  # General web
-iptables -A INPUT -p tcp --dport 8888 -j ACCEPT  # Jupyter
-
-echo "Firewall rules initialized successfully!"
-EOF
-
-RUN chmod +x /usr/local/bin/init-firewall.sh && \
-    echo "developer ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/developer-firewall && \
-    chmod 0440 /etc/sudoers.d/developer-firewall
-
-# Copy and set up external scripts
+# Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
 COPY postCreateCommand.sh /usr/local/bin/
 
@@ -303,22 +208,27 @@ RUN sed -i 's/\r$//' /usr/local/bin/init-firewall.sh && \
 RUN sed -i 's/\r$//' /usr/local/bin/postCreateCommand.sh && \
     chmod +x /usr/local/bin/postCreateCommand.sh
 
+RUN chmod +x /usr/local/bin/init-firewall.sh && \
+    echo "developer ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/developer-firewall && \
+    chmod 0440 /etc/sudoers.d/developer-firewall
+
 # Persist bash history
 RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     && touch /commandhistory/.bash_history \
     && chown -R developer /commandhistory
 
-USER developer
-WORKDIR /workspace
-
-# Set environment variables
+# Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
+
+# Set the default shell to zsh rather than sh
 ENV SHELL=/bin/zsh
+
+# Set Python environment variables
 ENV PYTHONPATH=/workspace:/usr/local/lib/python3.11/site-packages
 ENV JUPYTER_CONFIG_DIR=/home/developer/.jupyter
 
-# Expose ports
+WORKDIR /workspace
+
 EXPOSE 3000 8000 8080 8888
 
-# Default command
 CMD ["/bin/zsh"] 

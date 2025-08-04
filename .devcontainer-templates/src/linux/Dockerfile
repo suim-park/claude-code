@@ -61,15 +61,30 @@ RUN apt update && apt upgrade -y && apt install -y \
     nvidia-utils-535 nvidia-settings \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js
+# Install Node.js and Claude in one step to ensure npm is available
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g npm@latest
+    npm install -g npm@latest && \
+    npm install -g @anthropic-ai/claude-code
 
 # Create developer user
 RUN useradd -m -s /bin/zsh -G sudo developer && \
     echo "developer ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/developer && \
     chmod 0440 /etc/sudoers.d/developer
+
+# Install uv (fast Python package manager)
+USER developer
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/developer/.bashrc && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/developer/.zshrc
+
+# Install pixi (conda-like package manager)
+RUN curl -fsSL https://pixi.sh/install.sh | bash && \
+    echo 'export PATH="$HOME/.pixi/bin:$PATH"' >> /home/developer/.bashrc && \
+    echo 'export PATH="$HOME/.pixi/bin:$PATH"' >> /home/developer/.zshrc
+
+# Set environment variables for PATH
+ENV PATH="/home/developer/.local/bin:/home/developer/.pixi/bin:$PATH"
 
 # Set up developer environment
 USER developer
@@ -105,7 +120,7 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     -x
 
-# Install Python packages with GPU support
+# Install Python packages with comprehensive AI/ML stack
 RUN pip3 install --user \
     # Core scientific computing
     numpy pandas matplotlib seaborn scipy scikit-learn \
@@ -122,16 +137,21 @@ RUN pip3 install --user \
     docker kubernetes boto3 azure-storage-blob google-cloud-storage \
     # Computer vision
     opencv-python pillow \
-    # Deep learning (CPU versions, GPU support via runtime)
-    torch torchvision torchaudio \
-    tensorflow \
-    transformers datasets \
     # Web applications
     streamlit gradio \
     # Development tools
     pre-commit \
     # GPU monitoring
     nvidia-ml-py3 gpustat
+
+# Install PyTorch with GPU support
+RUN pip3 install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install TensorFlow with GPU support
+RUN pip3 install --user tensorflow[and-cuda]
+
+# Install AI/ML libraries
+RUN pip3 install --user transformers datasets
 
 # Set up Jupyter configuration
 RUN mkdir -p /home/developer/.jupyter && \
@@ -154,34 +174,21 @@ if command -v nvidia-smi &> /dev/null; then
     echo "GPU Memory Usage:"
     nvidia-smi --query-gpu=memory.used,memory.free --format=csv,noheader,nounits
     
-    # Install CUDA toolkit if GPU is available
-    if ! command -v nvcc &> /dev/null; then
-        echo "Installing CUDA toolkit..."
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
-        dpkg -i cuda-keyring_1.0-1_all.deb
-        apt-get update
-        apt-get install -y cuda-toolkit-12-1
-        rm cuda-keyring_1.0-1_all.deb
-        export CUDA_HOME=/usr/local/cuda-12.1
-        export PATH=$PATH:/usr/local/cuda-12.1/bin
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64
+    # Check CUDA installation
+    if command -v nvcc &> /dev/null; then
+        echo "✅ CUDA Toolkit: $(nvcc --version | head -n1)"
+    else
+        echo "⚠️  CUDA Toolkit not found in PATH"
     fi
+    
+    # Check PyTorch GPU support
+    python3 -c "import torch; print(f'✅ PyTorch GPU: {torch.cuda.is_available()}')" 2>/dev/null || echo "⚠️  PyTorch not available"
+    
+    # Check TensorFlow GPU support
+    python3 -c "import tensorflow as tf; print(f'✅ TensorFlow GPU: {len(tf.config.list_physical_devices(\"GPU\")) > 0}')" 2>/dev/null || echo "⚠️  TensorFlow not available"
 else
-    echo "⚠️  No NVIDIA GPU detected. Running in CPU-only mode."
+    echo "⚠️  No NVIDIA GPU detected - GPU features will not be available"
 fi
-
-# Check CUDA installation
-if command -v nvcc &> /dev/null; then
-    echo "✅ CUDA $(nvcc --version | grep release | awk '{print $6}' | cut -c2-) detected"
-else
-    echo "⚠️  CUDA not found"
-fi
-
-# Check PyTorch GPU support
-python3 -c "import torch; print(f'✅ PyTorch {torch.__version__} - CUDA available: {torch.cuda.is_available()}')"
-
-# Check TensorFlow GPU support
-python3 -c "import tensorflow as tf; print(f'✅ TensorFlow {tf.__version__} - GPU available: {len(tf.config.list_physical_devices(\"GPU\")) > 0}')"
 
 echo ""
 echo "🚀 Development environment ready!"
@@ -190,11 +197,30 @@ echo "  - Node.js $(node --version)"
 echo "  - Python $(python3 --version)"
 echo "  - Git $(git --version)"
 echo "  - Claude Code $(claude-code --version 2>/dev/null || echo 'installed')"
+echo "  - uv $(uv --version 2>/dev/null || echo 'installed')"
+echo "  - pixi $(pixi --version 2>/dev/null || echo 'installed')"
+echo ""
+echo "Package Managers:"
+echo "  - uv: Fast Python package manager (uv add <package>)"
+echo "  - pixi: Cross-platform package manager (pixi add <package>)"
+echo "  - pip: Traditional Python package manager"
+echo "  - npm: Node.js package manager"
 echo ""
 echo "GPU Monitoring:"
 echo "  - nvidia-smi: GPU status and memory"
 echo "  - gpustat: Real-time GPU monitoring"
 echo "  - nvidia-settings: GPU configuration"
+echo ""
+echo "Development Tools:"
+echo "  - Jupyter: http://localhost:8888"
+echo "  - JupyterLab: http://localhost:8888/lab"
+echo "  - VS Code: Available in devcontainer"
+echo ""
+echo "Quick Start:"
+echo "  - uv init: Create new Python project"
+echo "  - pixi init: Create new cross-platform project"
+echo "  - jupyter lab: Start JupyterLab"
+echo "  - claude-code: Start Claude Code"
 EOF
 
 RUN chmod +x /usr/local/bin/setup-dev-environment.sh
@@ -202,14 +228,55 @@ RUN chmod +x /usr/local/bin/setup-dev-environment.sh
 # Create firewall script
 RUN cat > /usr/local/bin/init-firewall.sh << 'EOF'
 #!/bin/bash
+# Initialize firewall rules for the development environment
+
 echo "Initializing firewall rules..."
-# Add your firewall rules here
-echo "Firewall initialized."
+
+# Allow all traffic for development (you can customize this for production)
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+
+# Flush existing rules
+iptables -F
+iptables -X
+
+# Allow established connections
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Allow loopback
+iptables -A INPUT -i lo -j ACCEPT
+
+# Allow SSH (if needed)
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow development ports
+iptables -A INPUT -p tcp --dport 3000 -j ACCEPT  # Node.js
+iptables -A INPUT -p tcp --dport 8000 -j ACCEPT  # FastAPI
+iptables -A INPUT -p tcp --dport 8080 -j ACCEPT  # General web
+iptables -A INPUT -p tcp --dport 8888 -j ACCEPT  # Jupyter
+
+echo "Firewall rules initialized successfully!"
 EOF
 
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
     echo "developer ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/developer-firewall && \
     chmod 0440 /etc/sudoers.d/developer-firewall
+
+# Copy and set up external scripts
+COPY init-firewall.sh /usr/local/bin/
+COPY postCreateCommand.sh /usr/local/bin/
+
+# Deal with possible Windows line endings and ensure scripts are executable
+RUN sed -i 's/\r$//' /usr/local/bin/init-firewall.sh && \
+    chmod +x /usr/local/bin/init-firewall.sh
+RUN sed -i 's/\r$//' /usr/local/bin/postCreateCommand.sh && \
+    chmod +x /usr/local/bin/postCreateCommand.sh
+
+# Persist bash history
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+    && touch /commandhistory/.bash_history \
+    && chown -R developer /commandhistory
 
 USER developer
 WORKDIR /workspace

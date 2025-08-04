@@ -71,6 +71,20 @@ RUN useradd -m -s /bin/zsh -G sudo developer && \
     echo "developer ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/developer && \
     chmod 0440 /etc/sudoers.d/developer
 
+# Install uv (fast Python package manager)
+USER developer
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/developer/.bashrc && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/developer/.zshrc
+
+# Install pixi (conda-like package manager)
+RUN curl -fsSL https://pixi.sh/install.sh | bash && \
+    echo 'export PATH="$HOME/.pixi/bin:$PATH"' >> /home/developer/.bashrc && \
+    echo 'export PATH="$HOME/.pixi/bin:$PATH"' >> /home/developer/.zshrc
+
+# Set environment variables for PATH
+ENV PATH="/home/developer/.local/bin:/home/developer/.pixi/bin:$PATH"
+
 # Set up developer environment
 USER developer
 WORKDIR /home/developer
@@ -190,6 +204,14 @@ echo "  - Node.js $(node --version)"
 echo "  - Python $(python3 --version)"
 echo "  - Git $(git --version)"
 echo "  - Claude Code $(claude-code --version 2>/dev/null || echo 'installed')"
+echo "  - uv $(uv --version 2>/dev/null || echo 'installed')"
+echo "  - pixi $(pixi --version 2>/dev/null || echo 'installed')"
+echo ""
+echo "Package Managers:"
+echo "  - uv: Fast Python package manager (uv add <package>)"
+echo "  - pixi: Conda-like package manager (pixi add <package>)"
+echo "  - pip: Traditional Python package manager"
+echo "  - npm: Node.js package manager"
 echo ""
 echo "GPU Monitoring:"
 echo "  - nvidia-smi: GPU status and memory"

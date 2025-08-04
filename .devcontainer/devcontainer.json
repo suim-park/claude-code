@@ -11,10 +11,9 @@
   "runArgs": [
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW",
-    "--gpus=all",
     "--shm-size=2g",
     "--memory=8g",
-    "--cpus=4"
+    "--cpus=2"
   ],
   "customizations": {
     "vscode": {
@@ -38,7 +37,11 @@
         "ms-vscode.cmake-tools",
         "ms-vscode.hexeditor",
         "ms-vscode.remote-containers",
-        "ms-vscode.remote-wsl"
+        "ms-vscode.remote-wsl",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.flake8"
       ],
       "settings": {
         "editor.formatOnSave": true,

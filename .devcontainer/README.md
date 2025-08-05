@@ -7,9 +7,7 @@ This directory provides a Docker-based development environment for Claude Code d
 ```
 .devcontainer/
 ├── devcontainer.json          # Basic configuration for VS Code Remote Containers
-├── Dockerfile                 # Basic Dockerfile for VS Code Remote Containers
-├── run.sh                     # Main execution script for Docker Compose
-├── connect.sh                 # Editor connection script (no VS Code required)
+├── Dockerfile                 # Basic Dockerfile script (no VS Code required)
 └── README.md                  # This file
 
 .devcontainer-templates/
